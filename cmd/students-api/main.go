@@ -11,7 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/varunarora1606/Booking-App-Go/internal/config"
+	"github.com/varunarora1606/Booking-App-Go/internal/database"
+	"github.com/varunarora1606/Booking-App-Go/internal/http/handlers/order"
+	"github.com/varunarora1606/Booking-App-Go/internal/http/handlers/user"
+	"github.com/varunarora1606/Booking-App-Go/internal/models"
 )
 
 func main() {
@@ -19,12 +24,18 @@ func main() {
 	cfg := config.MustLoad()
 
 	// Db setup
+	database.Connect(cfg.DBUrl)
+	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
+		slog.Error("Failed to migrate database", "error", err.Error())
+		os.Exit(1) // Exit if migration fails
+	}
 
 	// Setup router
-	router := http.NewServeMux()
-	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello World!!"))
-	})
+	router := gin.Default()
+	router.POST("/api/v1/user/signup", user.Signup)
+	router.POST("/api/v1/user/login", user.Signin)
+	router.POST("/api/v1/user/logout", user.Logout)
+	router.POST("/api/v1/order/buy", order.AddOrder)
 
 	// Setup server
 	server := http.Server{
@@ -40,8 +51,8 @@ func main() {
 
 	go func() {
 		fmt.Println("Server started")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed{
-			log.Fatal("Failed to start server")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to start server", err.Error())
 		}
 	}()
 

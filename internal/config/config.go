@@ -29,7 +29,7 @@ func MustLoad() *Config {
 
 		configpath = *flags
 
-		if configpath == ""  {
+		if configpath == "" {
 			log.Fatal("Config path is not set")
 		}
 	}
