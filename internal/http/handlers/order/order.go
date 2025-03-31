@@ -3,6 +3,7 @@ package order
 import (
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,18 +26,23 @@ const (
 	No  yes_no = "no"
 )
 
-type addOrderReq struct {
+type buyHandlerReq struct {
 	UserId      string `json:"userId" binding:"required"`
 	StockSymbol string `json:"stockSymbol" binding:"required"`
 	Quantity    int    `json:"quantity" binding:"required"`
 	Price       int    `json:"price" binding:"required"`
 	StockType   string `json:"stockType" binding:"required"`
 }
+type sellHandlerReq struct {
+	UserId      string `json:"userId" binding:"required"`
+	StockSymbol string `json:"stockSymbol" binding:"required"`
+	Quantity    int    `json:"quantity" binding:"required"`
+	StockType   string `json:"stockType" binding:"required"`
+}
 
-func addOrderBook(symbol string, orderSide yes_no, price int, user string, quantity int) {
+func buyStock(symbol string, orderSide yes_no, price int, user string, quantity int) {
 	stockBook, exists := OrderBook[symbol]
 	if !exists {
-		fmt.Println("1")
 		// TODO: return error or do it in the handler function
 		stockBook = StockBook{
 			Yes: make(map[int]OrderDetails),
@@ -44,7 +50,6 @@ func addOrderBook(symbol string, orderSide yes_no, price int, user string, quant
 		}
 		OrderBook[symbol] = stockBook
 	}
-	fmt.Println("2")
 
 	var oppositeSide, currentSide *map[int]OrderDetails
 
@@ -58,13 +63,11 @@ func addOrderBook(symbol string, orderSide yes_no, price int, user string, quant
 
 	addToOrderBook := func(addQuantity int) {
 		if orderDetails, exists := (*currentSide)[price]; !exists {
-			fmt.Println("3")
 			(*currentSide)[price] = OrderDetails{
 				Total:  addQuantity,
 				Orders: map[string]int{user: addQuantity},
 			}
 		} else {
-			fmt.Println("4")
 			orderDetails.Total += addQuantity
 			orderDetails.Orders[user] += addQuantity
 			(*currentSide)[price] = orderDetails
@@ -84,7 +87,7 @@ func addOrderBook(symbol string, orderSide yes_no, price int, user string, quant
 				if quantity == 0 {
 					return
 				}
-				if orderDetails.Orders[user] < quantity {
+				if orderDetails.Orders[user] <= quantity {
 					quantity -= orderDetails.Orders[user]
 					delete(orderDetails.Orders, user)
 				} else {
@@ -99,15 +102,79 @@ func addOrderBook(symbol string, orderSide yes_no, price int, user string, quant
 	fmt.Println(OrderBook)
 }
 
-func AddOrder(c *gin.Context) {
-	var req addOrderReq
+func sellStock(symbol string, orderSide yes_no, user string, quantity int) {
+	stockBook, exists := OrderBook[symbol]
+	if !exists {
+		// TODO: return error or do it in the handler function
+		stockBook = StockBook{
+			Yes: make(map[int]OrderDetails),
+			No:  make(map[int]OrderDetails),
+		}
+		OrderBook[symbol] = stockBook
+	}
+
+	var currentSide *map[int]OrderDetails
+
+	if orderSide == Yes {
+		currentSide = &stockBook.Yes
+	} else {
+		currentSide = &stockBook.No
+	}
+
+	prices := make([]int, 0, len(*currentSide))
+	for price := range *currentSide {
+		prices = append(prices, price)
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(prices)))
+
+	for _, price := range prices {
+		orderDetails := (*currentSide)[price]
+		if orderDetails.Total <= quantity {
+			quantity -= orderDetails.Total
+			delete(*currentSide, price)
+		} else {
+			orderDetails.Total -= quantity
+			for user := range orderDetails.Orders {
+				if quantity == 0 {
+					break
+				}
+				if orderDetails.Orders[user] <= quantity {
+					quantity -= orderDetails.Orders[user]
+					delete(orderDetails.Orders, user)
+				} else {
+					orderDetails.Orders[user] -= quantity
+				}
+			}
+			(*currentSide)[price] = orderDetails
+		}
+		if quantity == 0 {break}
+	}
+
+}
+
+func BuyHandler(c *gin.Context) {
+	var req buyHandlerReq
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
 		return
 	}
 
-	addOrderBook(req.StockSymbol, yes_no(req.StockType), req.Price, req.UserId, req.Quantity)
+	buyStock(req.StockSymbol, yes_no(req.StockType), req.Price, req.UserId, req.Quantity)
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock added", "data": OrderBook})
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "data": OrderBook})
+}
+
+func SellHandler(c *gin.Context) {
+	var req sellHandlerReq
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
+		return
+	}
+
+	sellStock(req.StockSymbol, yes_no(req.StockType), req.UserId, req.Quantity)
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": OrderBook})
 }

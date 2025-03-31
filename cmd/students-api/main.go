@@ -35,7 +35,8 @@ func main() {
 	router.POST("/api/v1/user/signup", user.Signup)
 	router.POST("/api/v1/user/login", user.Signin)
 	router.POST("/api/v1/user/logout", user.Logout)
-	router.POST("/api/v1/order/buy", order.AddOrder)
+	router.POST("/api/v1/order/buy", order.BuyHandler)
+	router.POST("/api/v1/order/sell", order.SellHandler)
 
 	// Setup server
 	server := http.Server{
