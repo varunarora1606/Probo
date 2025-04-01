@@ -6,18 +6,10 @@ import (
 	"sort"
 
 	"github.com/gin-gonic/gin"
+	"github.com/varunarora1606/Booking-App-Go/internal/memory"
 )
 
-type OrderDetails struct {
-	Total  int            `json:"total"`
-	Orders map[string]int `json:"orders"`
-}
-type StockBook struct {
-	Yes map[int]OrderDetails `json:"yes"`
-	No  map[int]OrderDetails `json:"no"`
-}
 
-var OrderBook = make(map[string]StockBook)
 
 type yes_no string
 
@@ -41,17 +33,17 @@ type sellHandlerReq struct {
 }
 
 func buyStock(symbol string, orderSide yes_no, price int, user string, quantity int) {
-	stockBook, exists := OrderBook[symbol]
+	stockBook, exists := memory.OrderBook[symbol]
 	if !exists {
 		// TODO: return error or do it in the handler function
-		stockBook = StockBook{
-			Yes: make(map[int]OrderDetails),
-			No:  make(map[int]OrderDetails),
+		stockBook = memory.StockBook{
+			Yes: make(map[int]memory.OrderDetails),
+			No:  make(map[int]memory.OrderDetails),
 		}
-		OrderBook[symbol] = stockBook
+		memory.OrderBook[symbol] = stockBook
 	}
 
-	var oppositeSide, currentSide *map[int]OrderDetails
+	var oppositeSide, currentSide *map[int]memory.OrderDetails
 
 	if orderSide == Yes {
 		oppositeSide = &stockBook.No
@@ -63,7 +55,7 @@ func buyStock(symbol string, orderSide yes_no, price int, user string, quantity 
 
 	addToOrderBook := func(addQuantity int) {
 		if orderDetails, exists := (*currentSide)[price]; !exists {
-			(*currentSide)[price] = OrderDetails{
+			(*currentSide)[price] = memory.OrderDetails{
 				Total:  addQuantity,
 				Orders: map[string]int{user: addQuantity},
 			}
@@ -98,22 +90,22 @@ func buyStock(symbol string, orderSide yes_no, price int, user string, quantity 
 		}
 	}
 
-	OrderBook[symbol] = stockBook
-	fmt.Println(OrderBook)
+	memory.OrderBook[symbol] = stockBook
+	fmt.Println(memory.OrderBook)
 }
 
 func sellStock(symbol string, orderSide yes_no, user string, quantity int) {
-	stockBook, exists := OrderBook[symbol]
+	stockBook, exists := memory.OrderBook[symbol]
 	if !exists {
 		// TODO: return error or do it in the handler function
-		stockBook = StockBook{
-			Yes: make(map[int]OrderDetails),
-			No:  make(map[int]OrderDetails),
+		stockBook = memory.StockBook{
+			Yes: make(map[int]memory.OrderDetails),
+			No:  make(map[int]memory.OrderDetails),
 		}
-		OrderBook[symbol] = stockBook
+		memory.OrderBook[symbol] = stockBook
 	}
 
-	var currentSide *map[int]OrderDetails
+	var currentSide *map[int]memory.OrderDetails
 
 	if orderSide == Yes {
 		currentSide = &stockBook.Yes
@@ -163,7 +155,7 @@ func BuyHandler(c *gin.Context) {
 
 	buyStock(req.StockSymbol, yes_no(req.StockType), req.Price, req.UserId, req.Quantity)
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "data": OrderBook})
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "data": memory.OrderBook})
 }
 
 func SellHandler(c *gin.Context) {
@@ -176,5 +168,5 @@ func SellHandler(c *gin.Context) {
 
 	sellStock(req.StockSymbol, yes_no(req.StockType), req.UserId, req.Quantity)
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": OrderBook})
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": memory.OrderBook})
 }
