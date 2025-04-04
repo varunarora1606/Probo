@@ -13,7 +13,7 @@ type HandlerReq struct {
 	Quantity    int    `json:"quantity" binding:"required"`
 	Price       int    `json:"price"`
 	StockSide   memory.Yes_no `json:"stockSide" binding:"required,oneof=yes no"` //side
-	StockType OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
+	StockType memory.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
 
 func BuyHandler(c *gin.Context) {
@@ -24,7 +24,7 @@ func BuyHandler(c *gin.Context) {
 		return
 	}
 
-	buyStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, OrderType(req.StockType))
+	buyStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "data": memory.OrderBook})
 }
@@ -37,7 +37,7 @@ func SellHandler(c *gin.Context) {
 		return
 	}
 
-	sellStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, OrderType(req.StockType))
+	sellStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": memory.OrderBook})
 }
