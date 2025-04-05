@@ -8,12 +8,12 @@ import (
 )
 
 type HandlerReq struct {
-	UserId      string `json:"userId" binding:"required"`
-	StockSymbol string `json:"stockSymbol" binding:"required"` //symbol
-	Quantity    int    `json:"quantity" binding:"required"`
-	Price       int    `json:"price"`
-	StockSide   memory.Yes_no `json:"stockSide" binding:"required,oneof=yes no"` //side
-	StockType memory.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
+	UserId      string           `json:"userId" binding:"required"`
+	StockSymbol string           `json:"stockSymbol" binding:"required"` //symbol
+	Quantity    int              `json:"quantity" binding:"required"`
+	Price       int              `json:"price"`
+	StockSide   memory.Yes_no    `json:"stockSide" binding:"required,oneof=yes no"`       //side
+	StockType   memory.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
 
 func BuyHandler(c *gin.Context) {
@@ -26,7 +26,7 @@ func BuyHandler(c *gin.Context) {
 
 	buyStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "data": memory.OrderBook})
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "orderBook": memory.OrderBook, "inrBalance": memory.InrBalance, "stockBalance": memory.StockBalance, "betBook": memory.BetBook})
 }
 
 func SellHandler(c *gin.Context) {
@@ -39,5 +39,5 @@ func SellHandler(c *gin.Context) {
 
 	sellStock(req.StockSymbol, memory.Yes_no(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": memory.OrderBook})
+	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": memory.OrderBook, "inrBalance": memory.InrBalance, "stockBalance": memory.StockBalance, "betBook": memory.BetBook})
 }
