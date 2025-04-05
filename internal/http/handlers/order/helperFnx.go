@@ -105,6 +105,7 @@ func executeLimitOrder(
 		executeTransaction(symbol, user, price, quantity, transactionType, side)
 		orderDetails.Orders = updateOrders(symbol, orderDetails.Orders, price, &quantity)
 		(*oppositeSide)[oppPrice] = orderDetails
+		quantity = 0
 	}
 
 	if quantity > 0 {
