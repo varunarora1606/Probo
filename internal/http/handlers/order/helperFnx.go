@@ -7,215 +7,361 @@ import (
 	"github.com/varunarora1606/Booking-App-Go/internal/memory"
 )
 
-func order(
-	symbol string,
-	currentSide *map[int]memory.OrderDetails,
-	oppositeSide *map[int]memory.OrderDetails,
-	price int,
-	user string,
-	quantity int,
-	orderType memory.OrderType,
-	transactionType memory.TransactionType,
-	side memory.Yes_no,
-) {
+func order(symbol string, currentSide *map[int]memory.OrderDetails, oppositeSide *map[int]memory.OrderDetails, price int, user string, quantity int, orderType memory.OrderType, transactionType memory.TransactionType, side memory.Yes_no) {
 	if orderType == memory.Market {
-		executeMarketOrder(symbol, currentSide, oppositeSide, price, user, quantity, transactionType, side)
-	} else {
-		executeLimitOrder(symbol, currentSide, oppositeSide, price, user, quantity, transactionType, side)
-	}
-}
+		prices := make([]int, 0, len(*oppositeSide))
 
-func executeMarketOrder(
-	symbol string,
-	currentSide *map[int]memory.OrderDetails,
-	oppositeSide *map[int]memory.OrderDetails,
-	price int,
-	user string,
-	quantity int,
-	transactionType memory.TransactionType,
-	side memory.Yes_no,
-) {
-	prices := make([]int, 0, len(*oppositeSide))
-	for p := range *oppositeSide {
-		prices = append(prices, p)
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(prices)))
-
-	for _, p := range prices {
-		orderDetails := (*oppositeSide)[p]
-
-		if orderDetails.Total <= quantity {
-			quantity -= orderDetails.Total
-			executeTransaction(symbol, user, p, orderDetails.Total, transactionType, side)
-			delete(*oppositeSide, p)
-			dissolveOrders(symbol, orderDetails.Orders, p)
-		} else {
-			orderDetails.Total -= quantity
-			executeTransaction(symbol, user, p, quantity, transactionType, side)
-			orderDetails.Orders = updateOrders(symbol, orderDetails.Orders, p, &quantity)
-			(*oppositeSide)[p] = orderDetails
+		for price := range *oppositeSide {
+			prices = append(prices, price)
 		}
 
-		if quantity == 0 {
-			break
-		}
-	}
-}
+		sort.Sort(sort.Reverse(sort.IntSlice(prices)))
 
-func executeLimitOrder(
-	symbol string,
-	currentSide *map[int]memory.OrderDetails,
-	oppositeSide *map[int]memory.OrderDetails,
-	price int,
-	user string,
-	quantity int,
-	transactionType memory.TransactionType,
-	side memory.Yes_no,
-) {
-	addToOrderBook := func(addQuantity int) {
-		orderID := uuid.NewString()
-		if orderDetails, exists := (*currentSide)[price]; !exists {
-			(*currentSide)[price] = memory.OrderDetails{
-				Total:  addQuantity,
-				Orders: []string{orderID},
+		for _, price := range prices {
+			orderDetails := (*oppositeSide)[price]
+			if orderDetails.Total <= quantity {
+				quantity -= orderDetails.Total
+				if transactionType == memory.Sell {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity += (100 - price) * orderDetails.Total
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity -= orderDetails.Total
+					memory.StockBalance[symbol][user][side] = stockBalance
+				} else {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity -= (price) * orderDetails.Total
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity += orderDetails.Total
+					memory.StockBalance[symbol][user][side] = stockBalance
+				}
+				// TODO: Add to the user balance
+				// if transactionType == memory.Sell {
+
+				// } else {
+
+				// }
+				// transaction[price] = orderDetails.Total
+				delete(*oppositeSide, price)
+				// TODO: Delete all order
+				for _, orderId := range orderDetails.Orders {
+					// Remove the order from orderBook
+					bet := memory.BetBook[orderId]
+					delete(memory.BetBook, orderId)
+					if bet.TransactionType == memory.Sell {
+						// Return the INR to his account for that bet
+						inrBalance := memory.InrBalance[bet.UserId]
+						inrBalance.Quantity += (100 - price) * bet.Quantity
+						memory.InrBalance[bet.UserId] = inrBalance
+
+						// Remove the stock from his stockBalance
+						stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+						stockBalance.Locked -= bet.Quantity
+						memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+					} else {
+						// Remove the INR from his account for that bet
+						inrBalance := memory.InrBalance[bet.UserId]
+						inrBalance.Locked -= (100 - price) * bet.Quantity
+						memory.InrBalance[bet.UserId] = inrBalance
+
+						// Add the stock to his stockBalance
+						stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+						stockBalance.Quantity += bet.Quantity
+						memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+					}
+				}
+
+			} else {
+				orderDetails.Total -= quantity
+				if transactionType == memory.Sell {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity += (100 - price) * quantity
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity -= quantity
+					memory.StockBalance[symbol][user][side] = stockBalance
+				} else {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity -= (price) * quantity
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity += quantity
+					memory.StockBalance[symbol][user][side] = stockBalance
+				}
+				for _, orderId := range orderDetails.Orders {
+					// TODO: Desolve the Orderbook (Left)
+					if quantity == 0 {
+						break
+					}
+					bet := memory.BetBook[orderId]
+					if bet.Quantity <= quantity {
+						quantity -= bet.Quantity
+						// Disolve the transactions
+						delete(memory.BetBook, orderId)
+						if bet.TransactionType == memory.Sell {
+							// Return the INR to his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Quantity += (100 - price) * bet.Quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Remove the stock from his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Locked -= bet.Quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+						} else {
+							// Remove the INR from his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Locked -= (100 - price) * bet.Quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Add the stock to his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Quantity += bet.Quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+						}
+						// TODO: Delete order
+						// delete(orderDetails.Orders, user)
+					} else {
+						// TODO: Free the quantity
+						bet.Quantity -= quantity
+						quantity = 0
+						// Disolve the transactions
+						if bet.TransactionType == memory.Sell {
+							// Return the INR to his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Quantity += (100 - price) * quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Remove the stock from his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Locked -= quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+						} else {
+							// Remove the INR from his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Locked -= (100 - price) * quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Add the stock to his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Quantity += quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+						}
+						memory.BetBook[orderId] = bet
+					}
+				}
+				(*oppositeSide)[price] = orderDetails
+			}
+			if quantity == 0 {
+				break
+			}
+		}
+	} else { //TODO: Do from here
+		//NOTE: Here currentSide and oppositeSide is opposite in case of sell And price is also 100 - price
+		addToOrderBook := func(addQuantity int) {
+			if orderDetails, exists := (*currentSide)[price]; !exists {
+				(*currentSide)[price] = memory.OrderDetails{
+					Total:  addQuantity,
+					Orders: []string{uuid.NewString()},
+				}
+			} else {
+				orderDetails.Total += addQuantity
+				orderDetails.Orders = append(orderDetails.Orders, uuid.NewString())
+				// orderDetails.Orders[user] += addQuantity
+				(*currentSide)[price] = orderDetails
+			}
+		}
+
+		if orderDetails, exists := (*oppositeSide)[100-price]; !exists {
+			addToOrderBook(quantity)
+			if transactionType == memory.Sell {
+				stockBalance := memory.StockBalance[symbol][user][side]
+				stockBalance.Quantity -= quantity
+				stockBalance.Locked += quantity
+				memory.StockBalance[symbol][user][side] = stockBalance
+			} else {
+				userInrBalance := memory.InrBalance[user]
+				userInrBalance.Quantity -= (price) * quantity
+				userInrBalance.Locked += (price) * quantity
+				memory.InrBalance[user] = userInrBalance
 			}
 		} else {
-			orderDetails.Total += addQuantity
-			orderDetails.Orders = append(orderDetails.Orders, orderID)
-			(*currentSide)[price] = orderDetails
+			// TODO: Same as above If function (Make it into a single fnx)
+			if orderDetails.Total <= quantity {
+				quantity -= orderDetails.Total
+				if transactionType == memory.Sell {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity += (100 - price) * orderDetails.Total
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity -= orderDetails.Total
+					memory.StockBalance[symbol][user][side] = stockBalance
+				} else {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity -= (price) * orderDetails.Total
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity += orderDetails.Total
+					memory.StockBalance[symbol][user][side] = stockBalance
+				}
+				delete(*oppositeSide, 100-price)
+				for _, orderId := range orderDetails.Orders {
+					// Remove the order from orderBook
+					bet := memory.BetBook[orderId]
+					delete(memory.BetBook, orderId)
+					if bet.TransactionType == memory.Sell {
+						// Return the INR to his account for that bet
+						inrBalance := memory.InrBalance[bet.UserId]
+						inrBalance.Quantity += (100 - price) * bet.Quantity
+						memory.InrBalance[bet.UserId] = inrBalance
+
+						// Remove the stock from his stockBalance
+						stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+						stockBalance.Locked -= bet.Quantity
+						memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+					} else {
+						// Remove the INR from his account for that bet
+						inrBalance := memory.InrBalance[bet.UserId]
+						inrBalance.Locked -= (100 - price) * bet.Quantity
+						memory.InrBalance[bet.UserId] = inrBalance
+
+						// Add the stock to his stockBalance
+						stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+						stockBalance.Quantity += bet.Quantity
+						memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+					}
+				}
+			} else {
+				orderDetails.Total -= quantity
+				if transactionType == memory.Sell {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity += (100 - price) * quantity
+					memory.InrBalance[user] = userInrBalance
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity -= quantity
+					memory.StockBalance[symbol][user][side] = stockBalance
+				} else {
+					userInrBalance := memory.InrBalance[user]
+					userInrBalance.Quantity -= (price) * quantity
+					memory.InrBalance[user] = userInrBalance
+
+					// Add the stock to his stockBalance
+					if _, ok := memory.StockBalance[symbol]; !ok {
+						memory.StockBalance[symbol] = make(map[string]map[memory.Yes_no]memory.Balance)
+					}
+					
+					// Ensure the symbol map has the user ID map
+					if _, ok := memory.StockBalance[symbol][user]; !ok {
+						memory.StockBalance[symbol][user] = make(map[memory.Yes_no]memory.Balance)
+					}
+
+					stockBalance := memory.StockBalance[symbol][user][side]
+					stockBalance.Quantity += quantity
+					memory.StockBalance[symbol][user][side] = stockBalance
+				}
+				for _, orderId := range orderDetails.Orders {
+					bet := memory.BetBook[orderId]
+					if bet.Quantity <= quantity {
+						quantity -= bet.Quantity
+						// Disolve the transactions
+						delete(memory.BetBook, orderId)
+						if bet.TransactionType == memory.Sell {
+							// Return the INR to his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Quantity += (100 - price) * bet.Quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Remove the stock from his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Locked -= bet.Quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+						} else {
+							// Remove the INR from his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Locked -= (100 - price) * bet.Quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Add the stock to his stockBalance
+					if _, ok := memory.StockBalance[symbol]; !ok {
+						memory.StockBalance[symbol] = make(map[string]map[memory.Yes_no]memory.Balance)
+					}
+					
+					// Ensure the symbol map has the user ID map
+					if _, ok := memory.StockBalance[symbol][bet.UserId]; !ok {
+						memory.StockBalance[symbol][bet.UserId] = make(map[memory.Yes_no]memory.Balance)
+					}
+
+							// Add the stock to his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Quantity += bet.Quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+						}
+						// TODO: Delete order
+						// delete(orderDetails.Orders, user)
+					} else {
+						// TODO: Free the quantity
+						bet.Quantity -= quantity
+						quantity = 0
+						// Disolve the transactions
+						if bet.TransactionType == memory.Sell {
+							// Return the INR to his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Quantity += (100 - price) * quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Remove the stock from his stockBalance
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Locked -= quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+
+						} else {
+							// Remove the INR from his account for that bet
+							inrBalance := memory.InrBalance[bet.UserId]
+							inrBalance.Locked -= (100 - price) * quantity
+							memory.InrBalance[bet.UserId] = inrBalance
+
+							// Add the stock to his stockBalance
+							if _, ok := memory.StockBalance[symbol]; !ok {
+								memory.StockBalance[symbol] = make(map[string]map[memory.Yes_no]memory.Balance)
+							}
+							
+							// Ensure the symbol map has the user ID map
+							if _, ok := memory.StockBalance[symbol][bet.UserId]; !ok {
+								memory.StockBalance[symbol][bet.UserId] = make(map[memory.Yes_no]memory.Balance)
+							}
+							stockBalance := memory.StockBalance[symbol][bet.UserId][bet.Side]
+							stockBalance.Quantity += quantity
+							memory.StockBalance[symbol][bet.UserId][bet.Side] = stockBalance
+						}
+						memory.BetBook[orderId] = bet
+					}
+				}
+				(*oppositeSide)[100-price] = orderDetails
+			}
+			if quantity > 0 {
+				addToOrderBook(quantity)
+			}
 		}
-	}
-
-	oppPrice := 100 - price
-	orderDetails, exists := (*oppositeSide)[oppPrice]
-
-	if !exists {
-		addToOrderBook(quantity)
-		lockUserFunds(symbol, user, price, quantity, transactionType, side)
-		return
-	}
-
-	if orderDetails.Total <= quantity {
-		quantity -= orderDetails.Total
-		executeTransaction(symbol, user, price, orderDetails.Total, transactionType, side)
-		delete(*oppositeSide, oppPrice)
-		dissolveOrders(symbol, orderDetails.Orders, price)
-	} else {
-		orderDetails.Total -= quantity
-		executeTransaction(symbol, user, price, quantity, transactionType, side)
-		orderDetails.Orders = updateOrders(symbol, orderDetails.Orders, price, &quantity)
-		(*oppositeSide)[oppPrice] = orderDetails
-		quantity = 0
-	}
-
-	if quantity > 0 {
-		addToOrderBook(quantity)
-		lockUserFunds(symbol, user, price, quantity, transactionType, side)
-	}
-}
-
-func lockUserFunds(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Yes_no) {
-	if transactionType == memory.Sell {
-		stockBalance := memory.StockBalance[symbol][user][side]
-		stockBalance.Quantity -= quantity
-		stockBalance.Locked += quantity
-		memory.StockBalance[symbol][user][side] = stockBalance
-	} else {
-		userInrBalance := memory.InrBalance[user]
-		amount := price * quantity
-		userInrBalance.Quantity -= amount
-		userInrBalance.Locked += amount
-		memory.InrBalance[user] = userInrBalance
-	}
-}
-
-func executeTransaction(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Yes_no) {
-	amount := price * quantity
-	if transactionType == memory.Sell {
-		userInrBalance := memory.InrBalance[user]
-		userInrBalance.Quantity += amount
-		memory.InrBalance[user] = userInrBalance
-
-		if _, ok := memory.StockBalance[symbol]; !ok {
-			memory.StockBalance[symbol] = make(map[string]map[memory.Yes_no]memory.Balance)
-		}
-		
-		if _, ok := memory.StockBalance[symbol][user]; !ok {
-			memory.StockBalance[symbol][user] = make(map[memory.Yes_no]memory.Balance)
-		}
-
-		stockBalance := memory.StockBalance[symbol][user][side]
-		stockBalance.Quantity -= quantity
-		memory.StockBalance[symbol][user][side] = stockBalance
-	} else {
-		userInrBalance := memory.InrBalance[user]
-		userInrBalance.Quantity -= amount
-		memory.InrBalance[user] = userInrBalance
-
-		if _, ok := memory.StockBalance[symbol]; !ok {
-			memory.StockBalance[symbol] = make(map[string]map[memory.Yes_no]memory.Balance)
-		}
-		
-		if _, ok := memory.StockBalance[symbol][user]; !ok {
-			memory.StockBalance[symbol][user] = make(map[memory.Yes_no]memory.Balance)
-		}
-
-		stockBalance := memory.StockBalance[symbol][user][side]
-		stockBalance.Quantity += quantity
-		memory.StockBalance[symbol][user][side] = stockBalance
-	}
-}
-
-func dissolveOrders(symbol string, orders []string, price int) {
-	for _, orderId := range orders {
-		bet := memory.BetBook[orderId]
-		delete(memory.BetBook, orderId)
-		executeTransaction(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
-		adjustLockedBalance(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
-	}
-}
-
-func updateOrders(symbol string, orders []string, price int, quantity *int) []string {
-	newOrders := []string{}
-	for _, orderId := range orders {
-		if *quantity == 0 {
-			newOrders = append(newOrders, orderId)
-			continue
-		}
-
-		bet := memory.BetBook[orderId]
-		if bet.Quantity <= *quantity {
-			*quantity -= bet.Quantity
-			delete(memory.BetBook, orderId)
-			executeTransaction(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
-			adjustLockedBalance(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
-		} else {
-			bet.Quantity -= *quantity
-			executeTransaction(symbol, bet.UserId, price, *quantity, bet.TransactionType, bet.Side)
-			adjustLockedBalance(symbol, bet.UserId, price, *quantity, bet.TransactionType, bet.Side)
-			memory.BetBook[orderId] = bet
-			*quantity = 0
-			newOrders = append(newOrders, orderId)
-		}
-	}
-	return newOrders
-}
-
-func adjustLockedBalance(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Yes_no) {
-	if transactionType == memory.Sell {
-		stockBalance := memory.StockBalance[symbol][user][side]
-		stockBalance.Locked -= quantity
-		memory.StockBalance[symbol][user][side] = stockBalance
-	} else {
-		inrBalance := memory.InrBalance[user]
-		inrBalance.Locked -= price * quantity
-		memory.InrBalance[user] = inrBalance
 	}
 }
 
 func buyStock(symbol string, orderSide memory.Yes_no, price int, user string, quantity int, orderType memory.OrderType) {
 	stockBook, exists := memory.OrderBook[symbol]
 	if !exists {
+		// TODO: return error or do it in the handler function
 		stockBook = memory.StockBook{
 			Yes: make(map[int]memory.OrderDetails),
 			No:  make(map[int]memory.OrderDetails),
@@ -224,6 +370,7 @@ func buyStock(symbol string, orderSide memory.Yes_no, price int, user string, qu
 	}
 
 	var oppositeSide, currentSide *map[int]memory.OrderDetails
+
 	if orderSide == memory.Yes {
 		oppositeSide = &stockBook.No
 		currentSide = &stockBook.Yes
@@ -233,12 +380,14 @@ func buyStock(symbol string, orderSide memory.Yes_no, price int, user string, qu
 	}
 
 	order(symbol, currentSide, oppositeSide, price, user, quantity, orderType, memory.Buy, orderSide)
+
 	memory.OrderBook[symbol] = stockBook
 }
 
 func sellStock(symbol string, orderSide memory.Yes_no, price int, user string, quantity int, orderType memory.OrderType) {
 	stockBook, exists := memory.OrderBook[symbol]
 	if !exists {
+		// TODO: return error or do it in the handler function
 		stockBook = memory.StockBook{
 			Yes: make(map[int]memory.OrderDetails),
 			No:  make(map[int]memory.OrderDetails),
@@ -247,6 +396,7 @@ func sellStock(symbol string, orderSide memory.Yes_no, price int, user string, q
 	}
 
 	var currentSide, oppositeSide *map[int]memory.OrderDetails
+
 	if orderSide == memory.Yes {
 		oppositeSide = &stockBook.No
 		currentSide = &stockBook.Yes
