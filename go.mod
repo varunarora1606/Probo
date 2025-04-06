@@ -1,4 +1,4 @@
-module github.com/varunarora1606/Booking-App-Go
+module github.com/varunarora1606/Probo
 
 go 1.24.1
 

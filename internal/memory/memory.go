@@ -1,10 +1,10 @@
 package memory
 
-type Yes_no string
+type Side string
 
 const (
-	Yes Yes_no = "yes"
-	No  Yes_no = "no"
+	Yes Side = "yes"
+	No  Side = "no"
 )
 
 type OrderType string
@@ -39,7 +39,7 @@ type BetDetails struct {
 	UserId          string          `json:"userId"`
 	Price           int             `json:"price"`
 	Quantity        int             `json:"quantity"`
-	Side            Yes_no          `json:"side"`
+	Side            Side            `json:"side"`
 	TransactionType TransactionType `json:"transactionType"`
 }
 
@@ -47,6 +47,6 @@ var OrderBook = make(map[string]StockBook)
 
 var InrBalance = make(map[string]Balance)
 
-var StockBalance = make(map[string]map[string]map[Yes_no]Balance)
+var StockBalance = make(map[string]map[string]map[Side]Balance)
 
 var BetBook = make(map[string]BetDetails)

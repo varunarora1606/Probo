@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/varunarora1606/Booking-App-Go/internal/config"
-	"github.com/varunarora1606/Booking-App-Go/internal/database"
-	"github.com/varunarora1606/Booking-App-Go/internal/http/handlers/order"
-	"github.com/varunarora1606/Booking-App-Go/internal/http/handlers/user"
-	"github.com/varunarora1606/Booking-App-Go/internal/models"
+	"github.com/varunarora1606/Probo/internal/config"
+	"github.com/varunarora1606/Probo/internal/database"
+	"github.com/varunarora1606/Probo/internal/http/handlers/order"
+	"github.com/varunarora1606/Probo/internal/http/handlers/user"
+	"github.com/varunarora1606/Probo/internal/models"
 )
 
 func main() {

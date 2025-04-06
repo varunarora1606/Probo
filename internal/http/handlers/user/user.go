@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/varunarora1606/Booking-App-Go/internal/database"
-	"github.com/varunarora1606/Booking-App-Go/internal/models"
+	"github.com/varunarora1606/Probo/internal/database"
+	"github.com/varunarora1606/Probo/internal/models"
 )
 
 type signupReq struct {
