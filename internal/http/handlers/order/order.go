@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/varunarora1606/Probo/internal/memory"
 )
 
@@ -22,6 +21,7 @@ type CreateMarketHandlerReq struct {
 	UserId       string `json:"userId" binding:"required"`
 	Question     string `json:"question" binding:"required"`
 	EndTimeMilli int64  `json:"endTime" binding:"required"`
+	Symbol 		 string `json:"symbol" binding:"required"`
 }
 
 func BuyHandler(c *gin.Context) {
@@ -96,6 +96,8 @@ func CreateMarketHandler(c *gin.Context) {
 		return
 	}
 
+	// TODO: Check symbol in DB
+
 	endTime := time.Unix(0, req.EndTimeMilli*int64(time.Millisecond))
 	serverTime := time.Now()
 
@@ -103,26 +105,43 @@ func CreateMarketHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "EndTime should be in far future"})
 		return
 	}
-
-	symbol := uuid.NewString()
-
 	// TODO: Add to DB
 
 	// TODO: Add mutex
-	memory.OrderBook[symbol] = memory.StockBook{
+	memory.OrderBook[req.Symbol] = memory.StockBook{
 		Yes: make(map[int]memory.OrderDetails),
 		No:  make(map[int]memory.OrderDetails),
 	}
 
 	// TODO: Return Db result.
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Inr balance fetched successfully",
-		"data":    gin.H{"symbol": symbol, "endTime": endTime},
+		"data":    gin.H{"symbol": req.Symbol, "endTime": endTime},
 	})
 }
 
 func OnRampInrHandler(c *gin.Context) {
-	// TODO: Add Payment integration
+	var req struct {
+		UserId string `json:"userId" binding:"required"`
+		Quantity int `json:"quantity" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
+		return
+	}
+
+	// TODO: Add to DB
+	// TODO: Add mutex
+	userBalance := memory.InrBalance[req.UserId]
+	userBalance.Quantity += req.Quantity;
+	memory.InrBalance[req.UserId] = userBalance
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Inr balance ramped successfully",
+		"data":    gin.H{"balance": userBalance},
+	})
 }
 
 func GetInrBalanceHandler(c *gin.Context) {
