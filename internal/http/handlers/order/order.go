@@ -11,8 +11,8 @@ import (
 type HandlerReq struct {
 	UserId    string           `json:"userId" binding:"required"`
 	Symbol    string           `json:"stockSymbol" binding:"required"` //symbol
-	Quantity  int              `json:"quantity" binding:"required"`
-	Price     int              `json:"price"`
+	Quantity  int              `json:"quantity" binding:"required"` //Greater than 0 check
+	Price     int              `json:"price"` //Greater than 0 check only with limit
 	StockSide memory.Side      `json:"stockSide" binding:"required,oneof=yes no"`       //side
 	StockType memory.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
@@ -32,13 +32,12 @@ func BuyHandler(c *gin.Context) {
 		return
 	}
 
-	if _, exist := memory.OrderBook[req.Symbol]; !exist {
-		c.JSON(http.StatusNotFound, gin.H{"message": "This market does not exist"})
+	if err := orderEngine(req.Symbol, memory.Side(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType), memory.Buy); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
 		return
 	}
 
-	buyStock(req.Symbol, memory.Side(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
-
+	// TODO: get it from the deltas
 	c.JSON(http.StatusCreated, gin.H{"message": "Stock added successfully", "orderBook": memory.OrderBook, "inrBalance": memory.InrBalance, "stockBalance": memory.StockBalance, "betBook": memory.BetBook})
 }
 
@@ -50,12 +49,10 @@ func SellHandler(c *gin.Context) {
 		return
 	}
 
-	if _, exist := memory.OrderBook[req.Symbol]; !exist {
-		c.JSON(http.StatusNotFound, gin.H{"message": "This market does not exist"})
+	if err := orderEngine(req.Symbol, memory.Side(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType), memory.Sell); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
 		return
 	}
-
-	sellStock(req.Symbol, memory.Side(req.StockSide), req.Price, req.UserId, req.Quantity, memory.OrderType(req.StockType))
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Stock sold successfully", "data": memory.OrderBook, "inrBalance": memory.InrBalance, "stockBalance": memory.StockBalance, "betBook": memory.BetBook})
 }
@@ -70,6 +67,7 @@ func GetMarketHandler(c *gin.Context) {
 		return
 	}
 
+	// TODO: Ask engine
 	if marketBook, exist := memory.OrderBook[req.Symbol]; !exist {
 		c.JSON(http.StatusNotFound, gin.H{"message": "This market does not exist"})
 		return
@@ -96,8 +94,6 @@ func CreateMarketHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Check symbol in DB
-
 	endTime := time.Unix(0, req.EndTimeMilli*int64(time.Millisecond))
 	serverTime := time.Now()
 
@@ -105,7 +101,7 @@ func CreateMarketHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "EndTime should be in far future"})
 		return
 	}
-	// TODO: Add to DB
+	// TODO: Check and Add to DB
 
 	// TODO: Add mutex
 	memory.OrderBook[req.Symbol] = memory.StockBook{
@@ -116,7 +112,7 @@ func CreateMarketHandler(c *gin.Context) {
 	// TODO: Return Db result.
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Inr balance fetched successfully",
+		"message": "Market created successfully",
 		"data":    gin.H{"symbol": req.Symbol, "endTime": endTime},
 	})
 }
@@ -124,7 +120,7 @@ func CreateMarketHandler(c *gin.Context) {
 func OnRampInrHandler(c *gin.Context) {
 	var req struct {
 		UserId string `json:"userId" binding:"required"`
-		Quantity int `json:"quantity" binding:"required"`
+		Quantity int `json:"quantity" binding:"required gt=0"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -177,15 +173,15 @@ func GetStockBalanceHandler(c *gin.Context) {
 		return
 	}
 
-	if balance, exist := memory.StockBalance[req.UserId]; !exist {
-		c.JSON(http.StatusOK, gin.H{"message": "User does not have any stock"})
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Stock balance fetched successfully",
-			"data":    balance,
-		})
+	balance, exist := memory.StockBalance[req.UserId];
+	if !exist {
+		balance = nil
 	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Stock balance fetched successfully",
+		"data":    balance,
+	})
 }
 
 func GetMeHandler(c *gin.Context) {
@@ -208,7 +204,7 @@ func GetMeHandler(c *gin.Context) {
 	if stockBalance, exist := memory.StockBalance[req.UserId]; !exist {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "User does not have any stock",
-			"data":    gin.H{"stockBalance": "", "inrBalance": inrBalance},
+			"data":    gin.H{"stockBalance": nil, "inrBalance": inrBalance},
 		})
 		return
 	} else {

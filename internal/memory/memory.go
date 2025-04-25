@@ -1,5 +1,7 @@
 package memory
 
+import "sync"
+
 type Side string
 
 const (
@@ -43,10 +45,44 @@ type BetDetails struct {
 	TransactionType TransactionType `json:"transactionType"`
 }
 
-var OrderBook = make(map[string]StockBook)
+type Delta struct {
+	Msg string      // remove, update, add
+	OrderId string
+	Symbol string
+	Price int
+	Side Side
+	Quantity int
+}
 
-var InrBalance = make(map[string]Balance)
+type OrderBookType struct {
+	Mu sync.RWMutex
+	Data map[string]StockBook
+}
+type InrBalanceType struct {
+	Mu sync.RWMutex
+	Data map[string]Balance
+}
+type StockBalanceType struct {
+	Mu sync.RWMutex
+	Data map[string]map[string]map[Side]Balance
+}
+type BetBookType struct {
+	Mu sync.RWMutex
+	Data map[string]BetDetails
+}
 
-var StockBalance = make(map[string]map[string]map[Side]Balance)
+var OrderBook = OrderBookType {
+	Data: make(map[string]StockBook),
+}
 
-var BetBook = make(map[string]BetDetails)
+var InrBalance = InrBalanceType {
+	Data: make(map[string]Balance),
+}
+
+var StockBalance = StockBalanceType {
+	Data: make(map[string]map[string]map[Side]Balance),
+}
+
+var BetBook = BetBookType {
+	Data: make(map[string]BetDetails),
+}

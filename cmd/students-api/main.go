@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/varunarora1606/Probo/internal/config"
 	"github.com/varunarora1606/Probo/internal/database"
+	"github.com/varunarora1606/Probo/internal/engine"
 	"github.com/varunarora1606/Probo/internal/http/handlers/order"
 	"github.com/varunarora1606/Probo/internal/http/handlers/user"
 	"github.com/varunarora1606/Probo/internal/models"
@@ -24,7 +25,7 @@ func main() {
 	cfg := config.MustLoad()
 
 	// Db setup
-	database.Connect(cfg.DBUrl)
+	database.Connect(cfg.DBUrl, cfg.RedisUrl)
 	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
 		slog.Error("Failed to migrate database", "error", err.Error())
 		os.Exit(1) // Exit if migration fails
@@ -56,6 +57,8 @@ func main() {
 			log.Fatal("Failed to start server", err.Error())
 		}
 	}()
+
+	engine.Worker()
 
 	<-done
 

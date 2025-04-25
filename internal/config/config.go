@@ -15,6 +15,7 @@ type HTTPServer struct {
 type Config struct {
 	Env        string `yaml:"env" env:"ENV" env-required:"true" env-default:"production"`
 	DBUrl      string `yaml:"db_url" env:"DB_URL" env-required:"true"`
+	RedisUrl   string `yaml:"redis_url" env:"REDIS_URL" env-required:"true"`
 	HTTPServer `yaml:"http_server"`
 }
 
