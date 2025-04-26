@@ -36,8 +36,18 @@ func main() {
 	router.POST("/api/v1/user/signup", user.Signup)
 	router.POST("/api/v1/user/login", user.Signin)
 	router.POST("/api/v1/user/logout", user.Logout)
+
+	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)
+	
 	router.POST("/api/v1/order/buy", order.BuyHandler)
 	router.POST("/api/v1/order/sell", order.SellHandler)
+	router.POST("/api/v1/order/on-ramp-inr", order.OnRampInrHandler)
+	router.GET("/api/v1/order/inr-balance", order.GetInrBalanceHandler)
+	router.GET("/api/v1/order/stock-balance", order.GetStockBalanceHandler)
+	router.GET("/api/v1/order/me", order.GetMeHandler)
+
+	router.GET("/api/v1/order/market", order.GetMarketHandler)
+	router.GET("/api/v1/order/markets", order.GetMarketsHandler)
 
 	// Setup server
 	server := http.Server{
@@ -58,7 +68,7 @@ func main() {
 		}
 	}()
 
-	engine.Worker()
+	go engine.Worker()
 
 	<-done
 

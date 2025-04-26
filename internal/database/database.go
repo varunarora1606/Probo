@@ -27,7 +27,7 @@ func Connect(db_url string, redis_url string) {
 
 	fmt.Println("🚀 Connected to PostgreSQL successfully!")
 
-	opt, err := redis.ParseURL("redis://<user>:<pass>@localhost:6379/<db>")
+	opt, err := redis.ParseURL(redis_url)
 	if err != nil {
 		panic(err)
 	}

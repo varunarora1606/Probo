@@ -23,38 +23,38 @@ type Input struct {
 type Output struct {
 	ForWs bool
 	ApiId string
-	Err error
+	Err string
 	Market memory.StockBook
 	Markets map[string]memory.StockBook
 	InrBalance memory.Balance
 	StockBalance map[string]map[memory.Side]memory.Balance
 	Deltas []memory.Delta
+	Trade memory.Trade
 }
 
-func Worker(input Input) (Output, error) {
+func worker(input Input) (Output, error) {
 
 	inputJson, err := json.Marshal(input);
 	if  err != nil {
-		return Output{}, fmt.Errorf("Error during marshalling: %v", err)
+		return Output{}, fmt.Errorf("error during marshalling: %v", err)
 	}
 
 	err = database.RClient.LPush(database.Ctx, "input", inputJson).Err()
 	if err != nil {
-		return Output{}, fmt.Errorf("Error during LPUSH on 'input': %v", err)
+		return Output{}, fmt.Errorf("error during LPUSH on 'input': %v", err)
 	}
 
 	result, err := database.RClient.BRPop(database.Ctx, 0, "output").Result()
 	if err != nil {
-		return Output{}, fmt.Errorf("Error during BRPOP on 'output': %v", err)
+		return Output{}, fmt.Errorf("error during BRPOP on 'output': %v", err)
 	}
 
 	data := result[1]
 	var output Output
 
 	if err := json.Unmarshal([]byte(data), &output); err != nil {
-		return Output{}, fmt.Errorf("Error during unmarshalling of %s in 'output': %v", data, err)
+		return Output{}, fmt.Errorf("error during unmarshalling of %s in 'output': %v", data, err)
 	}
 
 	return output, nil
-
 }

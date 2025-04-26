@@ -8,15 +8,16 @@ import (
 	"github.com/varunarora1606/Probo/internal/memory"
 )
 
-var tempOrderBook map[string]memory.StockBook
+var tempOrderBook memory.StockBook
 var tempInrBalance map[string]memory.Balance
 var tempStockBalance map[string]map[string]map[memory.Side]memory.Balance
 var tempBetBook map[string]memory.BetDetails
 
 // For WS
-var deltas []memory.Delta
+// var deltas []memory.Delta
 
-// TODO: Agr ek bhi process me problem hui toh pooraa revert back karna chahiye. Starting me hi sell karta hai tu kuch toh error aata hai but order and betbook me add ho jata hai tera order(Fixed it by moving addToOrderbook above) but still it is imp do it.
+// For Api
+var trade memory.Trade
 
 func flipSide(side memory.Side) memory.Side {
 	sideFlip := map[memory.Side]memory.Side{
@@ -34,41 +35,50 @@ func OrderEngine(
 	quantity int,
 	orderType memory.OrderType,
 	transactionType memory.TransactionType,
-) error {
+) (memory.Trade, error) {
 	// mutex
 	memory.OrderBook.Mu.Lock()
 	memory.InrBalance.Mu.Lock()
 	memory.StockBalance.Mu.Lock()
 	memory.BetBook.Mu.Lock()
-	defer memory.OrderBook.Mu.Unlock()
-	defer memory.InrBalance.Mu.Unlock()
-	defer memory.StockBalance.Mu.Unlock()
-	defer memory.BetBook.Mu.Unlock()
 
-	tempOrderBook = memory.OrderBook.Data
-	tempInrBalance = memory.InrBalance.Data
-	tempStockBalance = memory.StockBalance.Data
-	tempBetBook = memory.BetBook.Data
+	defer func(){
+		memory.OrderBook.Mu.Unlock()
+		memory.InrBalance.Mu.Unlock()
+		memory.StockBalance.Mu.Unlock()
+		memory.BetBook.Mu.Unlock()
+		tempOrderBook = memory.StockBook{}
+		tempInrBalance = make(map[string]memory.Balance)
+		tempStockBalance = make(map[string]map[string]map[memory.Side]memory.Balance)
+		tempBetBook = make(map[string]memory.BetDetails)
+		fmt.Println("defer called")
+		trade = memory.Trade{}
+	}()
+	var err error = nil
+
+	tempOrderBook, err = partialCopyOrderBook(symbol, memory.OrderBook.Data)
+	if err != nil {
+		return memory.Trade{}, fmt.Errorf("no such symbol exists")
+	}
+	// TODO: Can be improved by adding only the necessary info at the time of requirement in below fnxs.
+	tempInrBalance = partialCopyInrBalance(memory.InrBalance.Data)
+	tempStockBalance = partialCopyStockBalance(memory.StockBalance.Data)
+	tempBetBook = partialCopyBetBook(memory.BetBook.Data)
 
 	if orderType == memory.Limit && transactionType == memory.Buy && tempInrBalance[user].Quantity < price * quantity {
-		return fmt.Errorf("insufficient balance")
+		return memory.Trade{}, fmt.Errorf("insufficient balance")
 	}
 	if transactionType == memory.Sell && tempStockBalance[user][symbol][side].Quantity < quantity {
-		return fmt.Errorf("insufficient stocks balance")
-	}
-
-	stockBook, exist := tempOrderBook[symbol]
-	if !exist {
-		return fmt.Errorf("no such symbol exists")
+		return memory.Trade{}, fmt.Errorf("insufficient stocks balance")
 	}
 
 	var currentSide, oppositeSide *map[int]memory.OrderDetails
 	if side == memory.Yes {
-		oppositeSide = &stockBook.No
-		currentSide = &stockBook.Yes
+		oppositeSide = &tempOrderBook.No
+		currentSide = &tempOrderBook.Yes
 	} else {
-		oppositeSide = &stockBook.Yes
-		currentSide = &stockBook.No
+		oppositeSide = &tempOrderBook.Yes
+		currentSide = &tempOrderBook.No
 	}
 
 	if transactionType == memory.Sell {
@@ -80,22 +90,26 @@ func OrderEngine(
 
 	if orderType == memory.Market {
 		if err := executeMarketOrder(symbol, oppositeSide, user, quantity, transactionType, side); err != nil {
-			return err
+			return memory.Trade{}, err
 		}
+
+		if trade.TotalQuantity < quantity {
+			return memory.Trade{}, fmt.Errorf("not enough liquidity available in the market")
+		}
+
 	} else {
 		// Mostly isme error nhi aega bcoz this have aalreaady been checked above
 		if err := executeLimitOrder(symbol, currentSide, oppositeSide, price, user, quantity, transactionType, side); err != nil {
-			return err
+			return memory.Trade{}, err
 		}
 	}
-	tempOrderBook[symbol] = stockBook
 
-	memory.OrderBook.Data = tempOrderBook
+	memory.OrderBook.Data[symbol] = tempOrderBook
 	memory.InrBalance.Data = tempInrBalance
 	memory.StockBalance.Data = tempStockBalance
 	memory.BetBook.Data = tempBetBook
 
-	return nil
+	return trade, nil
 }
 
 func executeMarketOrder(
@@ -231,7 +245,7 @@ func lockUserFunds(symbol, user string, price, quantity int, transactionType mem
 	return nil
 }
 
-func executeTransaction(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Side) error {
+func executeTransaction(symbol string, user string, price int, quantity int, transactionType memory.TransactionType, side memory.Side) error {
 	amount := price * quantity
 	if transactionType == memory.Sell {
 		userInrBalance := tempInrBalance[user]
@@ -269,6 +283,11 @@ func executeTransaction(symbol, user string, price, quantity int, transactionTyp
 		stockBalance.Quantity += quantity
 		tempStockBalance[user][symbol][side] = stockBalance
 	}
+	trade.TotalQuantity += quantity
+	trade.MicroTrades = append(trade.MicroTrades, memory.MicroTrade{
+		Quantity: quantity,
+		Price: price,
+	})
 	return nil
 }
 

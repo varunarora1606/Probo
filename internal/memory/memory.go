@@ -46,12 +46,22 @@ type BetDetails struct {
 }
 
 type Delta struct {
-	Msg string      // remove, update, add
+	Msg string      // remove, update, add  // Partially filled/ Fully filled/Unfilled (market)
 	OrderId string
 	Symbol string
 	Price int
 	Side Side
 	Quantity int
+}
+
+type MicroTrade struct {
+	Quantity int
+	Price int
+}
+
+type Trade struct {
+	TotalQuantity int
+	MicroTrades []MicroTrade
 }
 
 type OrderBookType struct {

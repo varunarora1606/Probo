@@ -23,12 +23,13 @@ type Task struct {
 type Output struct {
 	ForWs bool
 	ApiId string
-	Err error
+	Err string
 	Market memory.StockBook
 	Markets map[string]memory.StockBook
 	InrBalance memory.Balance
 	StockBalance map[string]map[memory.Side]memory.Balance
 	Deltas []memory.Delta
+	Trade memory.Trade
 }
 
 func Worker() {
@@ -40,7 +41,7 @@ func Worker() {
 		}
 
 		data := result[1]
-		var task Task  // Give it a type
+		var task Task
 
 		if err := json.Unmarshal([]byte(data), &task); err != nil {
 			log.Printf("Error during unmarshalling of %s in 'input': %v", data, err)
@@ -51,18 +52,25 @@ func Worker() {
 
 		switch task.Fnx {
 		case "order_engine":
-			err := OrderEngine(task.Symbol, task.StockSide, task.Price, task.UserId, task.Quantity, task.StockType, task.TransactionType)
-			output.Err = err
+			trade, err := OrderEngine(task.Symbol, task.StockSide, task.Price, task.UserId, task.Quantity, task.StockType, task.TransactionType)
+			output.Trade = trade
+			if err != nil {
+				output.Err = err.Error()
+			}
 		case "create_market":
 			err := CreateMarket(task.Symbol)
-			output.Err = err
+			if err != nil {
+				output.Err = err.Error()
+			}
 		case "on_ramp_inr":
 			balance := OnRampInr(task.UserId, task.Quantity)
 			output.InrBalance = balance
 		case "get_market":
 			market, err := GetMarket(task.Symbol)
 			output.Market = market
-			output.Err = err
+			if err != nil {
+				output.Err = err.Error()
+			}
 		case "get_markets":
 			markets := GetMarkets()
 			output.Markets =  markets
