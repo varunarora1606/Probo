@@ -8,7 +8,8 @@ import (
 	"github.com/varunarora1606/Probo/internal/memory"
 )
 
-var tempOrderBook memory.StockBook
+var tempSymbolBook memory.SymbolBook
+var tempStockBook memory.StockBook
 var tempInrBalance map[string]memory.Balance
 var tempStockBalance map[string]map[string]map[memory.Side]memory.Balance
 var tempBetBook map[string]memory.BetDetails
@@ -37,17 +38,20 @@ func OrderEngine(
 	transactionType memory.TransactionType,
 ) (memory.Trade, error) {
 	// mutex
+	memory.MarketBook.Mu.Lock()
 	memory.OrderBook.Mu.Lock()
 	memory.InrBalance.Mu.Lock()
 	memory.StockBalance.Mu.Lock()
 	memory.BetBook.Mu.Lock()
 
 	defer func(){
+		memory.MarketBook.Mu.Unlock()
 		memory.OrderBook.Mu.Unlock()
 		memory.InrBalance.Mu.Unlock()
 		memory.StockBalance.Mu.Unlock()
 		memory.BetBook.Mu.Unlock()
-		tempOrderBook = memory.StockBook{}
+		tempSymbolBook = memory.SymbolBook{}
+		tempStockBook = memory.StockBook{}
 		tempInrBalance = make(map[string]memory.Balance)
 		tempStockBalance = make(map[string]map[string]map[memory.Side]memory.Balance)
 		tempBetBook = make(map[string]memory.BetDetails)
@@ -56,9 +60,13 @@ func OrderEngine(
 	}()
 	var err error = nil
 
-	tempOrderBook, err = partialCopyOrderBook(symbol, memory.OrderBook.Data)
+	tempSymbolBook, err = partialCopySymbolBook(symbol, memory.MarketBook.Data)
 	if err != nil {
-		return memory.Trade{}, fmt.Errorf("no such symbol exists")
+		return memory.Trade{}, err
+	}
+	tempStockBook, err = partialCopyStockBook(symbol, memory.OrderBook.Data)
+	if err != nil {
+		return memory.Trade{}, err
 	}
 	// TODO: Can be improved by adding only the necessary info at the time of requirement in below fnxs.
 	tempInrBalance = partialCopyInrBalance(memory.InrBalance.Data)
@@ -74,11 +82,11 @@ func OrderEngine(
 
 	var currentSide, oppositeSide *map[int]memory.OrderDetails
 	if side == memory.Yes {
-		oppositeSide = &tempOrderBook.No
-		currentSide = &tempOrderBook.Yes
+		oppositeSide = &tempStockBook.No
+		currentSide = &tempStockBook.Yes
 	} else {
-		oppositeSide = &tempOrderBook.Yes
-		currentSide = &tempOrderBook.No
+		oppositeSide = &tempStockBook.Yes
+		currentSide = &tempStockBook.No
 	}
 
 	if transactionType == memory.Sell {
@@ -104,7 +112,10 @@ func OrderEngine(
 		}
 	}
 
-	memory.OrderBook.Data[symbol] = tempOrderBook
+	// TODO: Add volume to symbolBook using "trade"
+
+	memory.MarketBook.Data[symbol] = tempSymbolBook
+	memory.OrderBook.Data[symbol] = tempStockBook
 	memory.InrBalance.Data = tempInrBalance
 	memory.StockBalance.Data = tempStockBalance
 	memory.BetBook.Data = tempBetBook
@@ -282,6 +293,11 @@ func executeTransaction(symbol string, user string, price int, quantity int, tra
 		stockBalance := tempStockBalance[user][symbol][side]
 		stockBalance.Quantity += quantity
 		tempStockBalance[user][symbol][side] = stockBalance
+	}
+	if side == memory.No {
+		tempSymbolBook.YesClosing = 100 - price
+	} else {
+		tempSymbolBook.YesClosing = price
 	}
 	trade.TotalQuantity += quantity
 	trade.MicroTrades = append(trade.MicroTrades, memory.MicroTrade{

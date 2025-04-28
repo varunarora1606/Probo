@@ -2,11 +2,12 @@ package engine
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/varunarora1606/Probo/internal/memory"
 )
 
-func partialCopyOrderBook(symbol string, original map[string]memory.StockBook) (memory.StockBook, error) {
+func partialCopyStockBook(symbol string, original map[string]memory.StockBook) (memory.StockBook, error) {
 	stockBook, exist := original[symbol]
 	if !exist {
 		return memory.StockBook{}, fmt.Errorf("no such symbol exists")
@@ -81,4 +82,23 @@ func partialCopyBetBook(original map[string]memory.BetDetails) map[string]memory
 	}
 
 	return copy
+}
+
+func partialCopySymbolBook(symbol string, original map[string]memory.SymbolBook) (memory.SymbolBook, error) {
+	symbolBook, exist := original[symbol]
+	if !exist {
+		return memory.SymbolBook{}, fmt.Errorf("no such symbol exists")
+	}
+
+	if symbolBook.EndTime < time.Now().UnixNano() {
+		return memory.SymbolBook{}, fmt.Errorf("market have expired")
+	}
+
+
+	return memory.SymbolBook{
+		Question: symbolBook.Question,
+		EndTime: symbolBook.EndTime,
+		YesClosing: symbolBook.YesClosing,
+		Volume: symbolBook.Volume,
+	}, nil
 }

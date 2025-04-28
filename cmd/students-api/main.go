@@ -11,18 +11,24 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/varunarora1606/Probo/internal/config"
 	"github.com/varunarora1606/Probo/internal/database"
 	"github.com/varunarora1606/Probo/internal/engine"
 	"github.com/varunarora1606/Probo/internal/http/handlers/order"
-	"github.com/varunarora1606/Probo/internal/http/handlers/user"
+	"github.com/varunarora1606/Probo/internal/middlewares"
 	"github.com/varunarora1606/Probo/internal/models"
 )
 
 func main() {
 	// Load config
+	// err := godotenv.Load("C:/WebDev/Probo-Go/.env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 	cfg := config.MustLoad()
+
 
 	// Db setup
 	database.Connect(cfg.DBUrl, cfg.RedisUrl)
@@ -33,19 +39,28 @@ func main() {
 
 	// Setup router
 	router := gin.Default()
-	router.POST("/api/v1/user/signup", user.Signup)
-	router.POST("/api/v1/user/login", user.Signin)
-	router.POST("/api/v1/user/logout", user.Logout)
+	// router.POST("/api/v1/user/signup", user.Signup)
+	// router.POST("/api/v1/user/login", user.Signin)
+	// router.POST("/api/v1/user/logout", user.Logout)
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:3000"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,  // Allow credentials (cookies, authorization headers, etc.)
+		MaxAge: 12 * time.Hour,   // Cache preflight response for 12 hours
+	}))
 
 	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)
 	
-	router.POST("/api/v1/order/buy", order.BuyHandler)
+	router.POST("/api/v1/order/buy", middlewares.VerifyJWT(cfg.ClerkPubKey), order.BuyHandler)
 	router.POST("/api/v1/order/sell", order.SellHandler)
 	router.POST("/api/v1/order/on-ramp-inr", order.OnRampInrHandler)
 	router.GET("/api/v1/order/inr-balance", order.GetInrBalanceHandler)
 	router.GET("/api/v1/order/stock-balance", order.GetStockBalanceHandler)
 	router.GET("/api/v1/order/me", order.GetMeHandler)
 
+	router.GET("/api/v1/order/orderbook", order.GetOrderBookHandler)
 	router.GET("/api/v1/order/market", order.GetMarketHandler)
 	router.GET("/api/v1/order/markets", order.GetMarketsHandler)
 

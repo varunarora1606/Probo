@@ -6,28 +6,39 @@ import (
 	"github.com/varunarora1606/Probo/internal/memory"
 )
 
-func GetMarket(symbol string) (memory.StockBook, error) {
-	memory.OrderBook.Mu.RLock()
-	defer memory.OrderBook.Mu.RUnlock()
+func GetMarket(symbol string) (memory.SymbolBook, error) {
+	memory.MarketBook.Mu.RLock()
+	defer memory.MarketBook.Mu.RUnlock()
 
-	if marketBook, exist := memory.OrderBook.Data[symbol]; !exist {
-		return memory.StockBook{}, fmt.Errorf("this market does not exist")
+	if symbolBook, exist := memory.MarketBook.Data[symbol]; !exist {
+		return memory.SymbolBook{}, fmt.Errorf("this market does not exist")
 	} else {
-		return marketBook, nil
+		return symbolBook, nil
 	}
 }
 
-func GetMarkets() (map[string]memory.StockBook) {
+func GetMarkets() (map[string]memory.SymbolBook) {
+	memory.MarketBook.Mu.RLock()
+	defer memory.MarketBook.Mu.RUnlock()
+	
+	return memory.MarketBook.Data
+}
+
+func GetOrderBook(symbol string) (memory.StockBook, error) {
 	memory.OrderBook.Mu.RLock()
 	defer memory.OrderBook.Mu.RUnlock()
 
-	return memory.OrderBook.Data
+	if stockBook, exist := memory.OrderBook.Data[symbol]; !exist {
+		return memory.StockBook{}, fmt.Errorf("this market does not exist")
+	} else {
+		return stockBook, nil
+	}
 }
 
 func GetInrBalance(userId string) (memory.Balance) {
 	memory.InrBalance.Mu.RLock()
 	defer memory.InrBalance.Mu.RUnlock()
-
+	
 	if balance, exist := memory.InrBalance.Data[userId]; !exist {
 		return memory.Balance{
 			Quantity: 0,

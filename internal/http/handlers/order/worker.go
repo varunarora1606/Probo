@@ -5,55 +5,33 @@ import (
 	"fmt"
 
 	"github.com/varunarora1606/Probo/internal/database"
-	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
 
-type Input struct {
-	ApiId           string
-	Fnx             string
-	UserId          string
-	Symbol          string
-	Quantity        int
-	Price           int
-	StockSide       memory.Side
-	StockType       memory.OrderType
-	TransactionType memory.TransactionType
-}
 
-type Output struct {
-	ForWs bool
-	ApiId string
-	Err string
-	Market memory.StockBook
-	Markets map[string]memory.StockBook
-	InrBalance memory.Balance
-	StockBalance map[string]map[memory.Side]memory.Balance
-	Deltas []memory.Delta
-	Trade memory.Trade
-}
 
-func worker(input Input) (Output, error) {
+func worker(input types.Input) (types.Output, error) {
 
 	inputJson, err := json.Marshal(input);
 	if  err != nil {
-		return Output{}, fmt.Errorf("error during marshalling: %v", err)
+		return types.Output{}, fmt.Errorf("error during marshalling: %v", err)
 	}
 
 	err = database.RClient.LPush(database.Ctx, "input", inputJson).Err()
 	if err != nil {
-		return Output{}, fmt.Errorf("error during LPUSH on 'input': %v", err)
+		return types.Output{}, fmt.Errorf("error during LPUSH on 'input': %v", err)
 	}
 
 	result, err := database.RClient.BRPop(database.Ctx, 0, "output").Result()
 	if err != nil {
-		return Output{}, fmt.Errorf("error during BRPOP on 'output': %v", err)
+		return types.Output{}, fmt.Errorf("error during BRPOP on 'output': %v", err)
 	}
 
 	data := result[1]
-	var output Output
+	var output types.Output
 
 	if err := json.Unmarshal([]byte(data), &output); err != nil {
-		return Output{}, fmt.Errorf("error during unmarshalling of %s in 'output': %v", data, err)
+		return types.Output{}, fmt.Errorf("error during unmarshalling of %s in 'output': %v", data, err)
 	}
 
 	return output, nil

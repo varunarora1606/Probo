@@ -7,10 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
 
 type HandlerReq struct {
-	UserId    string           `json:"userId" binding:"required"`
 	Symbol    string           `json:"symbol" binding:"required"` //symbol
 	Quantity  int              `json:"quantity" binding:"required,gt=0"` //Greater than 0 check
 	Price     int              `json:"price" binding:"gt=0"` //Greater than 0 check only with limit
@@ -19,10 +19,19 @@ type HandlerReq struct {
 }
 
 type CreateMarketHandlerReq struct {
-	UserId       string `json:"userId" binding:"required"`
 	Question     string `json:"question" binding:"required"`
 	EndTimeMilli int64  `json:"endTime" binding:"required,gt=0"`
 	Symbol 		 string `json:"symbol" binding:"required"`
+}
+
+func GetUserID(c *gin.Context) string {
+	userId, _ := c.Get("userId")
+	if userIdStr, ok := userId.(string); ok {
+		return userIdStr
+	}
+	fmt.Println("Failed to retrieve userId from context")
+	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+	return ""
 }
 
 func BuyHandler(c *gin.Context) {
@@ -33,12 +42,12 @@ func BuyHandler(c *gin.Context) {
 		return
 	}
 
-	result ,err := worker(Input{
+	result ,err := worker(types.Input{
 		Fnx: "order_engine",
 		Symbol: req.Symbol, 
 		StockSide: memory.Side(req.StockSide), 
 		Price: req.Price, 
-		UserId: req.UserId, 
+		UserId: GetUserID(c), 
 		Quantity: req.Quantity, 
 		StockType: memory.OrderType(req.StockType), 
 		TransactionType: memory.Buy,
@@ -76,12 +85,12 @@ func SellHandler(c *gin.Context) {
 		return
 	}
 
-	result ,err := worker(Input{
+	result ,err := worker(types.Input{
 		Fnx: "order_engine",
 		Symbol: req.Symbol, 
 		StockSide: memory.Side(req.StockSide), 
 		Price: req.Price, 
-		UserId: req.UserId, 
+		UserId: GetUserID(c), 
 		Quantity: req.Quantity, 
 		StockType: memory.OrderType(req.StockType), 
 		TransactionType: memory.Sell,
@@ -123,7 +132,7 @@ func GetMarketHandler(c *gin.Context) {
 		return
 	}
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "get_market",
 		Symbol: req.Symbol,
 	})
@@ -144,7 +153,7 @@ func GetMarketHandler(c *gin.Context) {
 }
 
 func GetMarketsHandler(c *gin.Context) {
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "get_markets",
 	})
 	if err != nil {
@@ -159,6 +168,35 @@ func GetMarketsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Markets fetched successfully",
 		"data":    gin.H{"markets": result.Markets},
+	})
+}
+
+func GetOrderBookHandler(c *gin.Context) {
+	var req struct {
+		Symbol string `json:"symbol" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
+		return
+	}
+
+	result, err := worker(types.Input{
+		Fnx: "get_orderbook",
+		Symbol: req.Symbol,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
+		return
+	}
+	if result.Err != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": result.Err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "OrderBook successfully",
+		"data":    gin.H{"orderBook": result.StockBook},
 	})
 }
 
@@ -179,10 +217,13 @@ func CreateMarketHandler(c *gin.Context) {
 	}
 	// TODO: Check and Add to DB
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "create_market",
 		Symbol: req.Symbol,
+		Question: req.Question,
+		EndTime: endTime.UnixNano(),
 	})
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
 		return
@@ -201,7 +242,6 @@ func CreateMarketHandler(c *gin.Context) {
 
 func OnRampInrHandler(c *gin.Context) {
 	var req struct {
-		UserId string `json:"userId" binding:"required"`
 		Quantity int `json:"quantity" binding:"required,gt=0"`
 	}
 
@@ -212,10 +252,10 @@ func OnRampInrHandler(c *gin.Context) {
 
 	// TODO: Add to DB
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "on_ramp_inr",
 		Quantity: req.Quantity,
-		UserId: req.UserId,
+		UserId: GetUserID(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -234,7 +274,6 @@ func OnRampInrHandler(c *gin.Context) {
 
 func GetInrBalanceHandler(c *gin.Context) {
 	var req struct {
-		UserId string `json:"userId" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -242,9 +281,9 @@ func GetInrBalanceHandler(c *gin.Context) {
 		return
 	}
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "get_inr_balance",
-		UserId: req.UserId,
+		UserId: GetUserID(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -263,7 +302,6 @@ func GetInrBalanceHandler(c *gin.Context) {
 
 func GetStockBalanceHandler(c *gin.Context) {
 	var req struct {
-		UserId string `json:"userId" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -271,9 +309,9 @@ func GetStockBalanceHandler(c *gin.Context) {
 		return
 	}
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "get_stock_balance",
-		UserId: req.UserId,
+		UserId: GetUserID(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -292,7 +330,6 @@ func GetStockBalanceHandler(c *gin.Context) {
 
 func GetMeHandler(c *gin.Context) {
 	var req struct {
-		UserId string `json:"userId" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -300,9 +337,9 @@ func GetMeHandler(c *gin.Context) {
 		return
 	}
 
-	result, err := worker(Input{
+	result, err := worker(types.Input{
 		Fnx: "get_me",
-		UserId: req.UserId,
+		UserId: GetUserID(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})

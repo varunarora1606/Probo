@@ -5,32 +5,8 @@ import (
 	"log"
 
 	"github.com/varunarora1606/Probo/internal/database"
-	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
-
-type Task struct {
-	ApiId string
-	Fnx string
-	UserId    string          
-	Symbol    string          
-	Quantity  int             
-	Price     int             
-	StockSide memory.Side     
-	StockType memory.OrderType
-	TransactionType memory.TransactionType
-}
-
-type Output struct {
-	ForWs bool
-	ApiId string
-	Err string
-	Market memory.StockBook
-	Markets map[string]memory.StockBook
-	InrBalance memory.Balance
-	StockBalance map[string]map[memory.Side]memory.Balance
-	Deltas []memory.Delta
-	Trade memory.Trade
-}
 
 func Worker() {
 	for {
@@ -41,32 +17,32 @@ func Worker() {
 		}
 
 		data := result[1]
-		var task Task
+		var input types.Input
 
-		if err := json.Unmarshal([]byte(data), &task); err != nil {
+		if err := json.Unmarshal([]byte(data), &input); err != nil {
 			log.Printf("Error during unmarshalling of %s in 'input': %v", data, err)
 			continue
 		}
 
-		var output Output;
+		var output types.Output;
 
-		switch task.Fnx {
+		switch input.Fnx {
 		case "order_engine":
-			trade, err := OrderEngine(task.Symbol, task.StockSide, task.Price, task.UserId, task.Quantity, task.StockType, task.TransactionType)
+			trade, err := OrderEngine(input.Symbol, input.StockSide, input.Price, input.UserId, input.Quantity, input.StockType, input.TransactionType)
 			output.Trade = trade
 			if err != nil {
 				output.Err = err.Error()
 			}
 		case "create_market":
-			err := CreateMarket(task.Symbol)
+			err := CreateMarket(input.Symbol, input.Question, input.EndTime)
 			if err != nil {
 				output.Err = err.Error()
 			}
 		case "on_ramp_inr":
-			balance := OnRampInr(task.UserId, task.Quantity)
+			balance := OnRampInr(input.UserId, input.Quantity)
 			output.InrBalance = balance
 		case "get_market":
-			market, err := GetMarket(task.Symbol)
+			market, err := GetMarket(input.Symbol)
 			output.Market = market
 			if err != nil {
 				output.Err = err.Error()
@@ -74,14 +50,20 @@ func Worker() {
 		case "get_markets":
 			markets := GetMarkets()
 			output.Markets =  markets
+		case "get_orderbook":
+			stockBook, err := GetOrderBook(input.Symbol)
+			output.StockBook = stockBook
+			if err != nil {
+				output.Err = err.Error()
+			}
 		case "get_inr_balance":
-			balance := GetInrBalance(task.UserId)
+			balance := GetInrBalance(input.UserId)
 			output.InrBalance = balance
 		case "get_stock_balance":
-			balance := GetStockBalance(task.UserId)
+			balance := GetStockBalance(input.UserId)
 			output.StockBalance = balance
 		case "get_me":
-			inrBalance, stockBalance := GetMe(task.UserId)
+			inrBalance, stockBalance := GetMe(input.UserId)
 			output.InrBalance = inrBalance
 			output.StockBalance = stockBalance
 		}
