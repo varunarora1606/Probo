@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
 
 func GetMarket(symbol string) (memory.SymbolBook, error) {
@@ -60,11 +61,13 @@ func GetStockBalance(userId string) (map[string]map[memory.Side]memory.Balance) 
 	}
 }
 
-func GetMe(userId string) (memory.Balance, map[string]map[memory.Side]memory.Balance) {
+func GetMe(userId string) (memory.Balance, []types.PortfolioItem) {
 	memory.StockBalance.Mu.RLock()
 	memory.InrBalance.Mu.RLock()
-	defer memory.StockBalance.Mu.RUnlock()
+	memory.MarketBook.Mu.RLock()
+	defer memory.MarketBook.Mu.RUnlock()
 	defer memory.InrBalance.Mu.RUnlock()
+	defer memory.StockBalance.Mu.RUnlock()
 
 	inrBalance, exist := memory.InrBalance.Data[userId];
 	if !exist {
@@ -74,10 +77,23 @@ func GetMe(userId string) (memory.Balance, map[string]map[memory.Side]memory.Bal
 		}
 	}
 
+	portfolioItems := []types.PortfolioItem{}
+
 	stockBalance, exist := memory.StockBalance.Data[userId]; 
 	if !exist {
 		stockBalance = nil
 	}
 
-	return inrBalance, stockBalance
+	for symbol, sideBalance := range stockBalance {
+		yesClosing := memory.MarketBook.Data[symbol].YesClosing
+		value := sideBalance[memory.Yes].Quantity*yesClosing + sideBalance[memory.No].Quantity*(100-yesClosing)
+		portfolioItems = append(portfolioItems, types.PortfolioItem{
+			Symbol: symbol,
+			Quantity: sideBalance[memory.Yes].Quantity + sideBalance[memory.No].Quantity,
+			Value: value,
+		})
+	}
+
+
+	return inrBalance, portfolioItems
 }

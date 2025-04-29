@@ -25,6 +25,13 @@ type Output struct {
 	StockBook memory.StockBook
 	InrBalance memory.Balance
 	StockBalance map[string]map[memory.Side]memory.Balance
+	PortfolioItems []PortfolioItem
 	Deltas []memory.Delta
 	Trade memory.Trade
+}
+
+type PortfolioItem struct {
+	Symbol string
+	Value int
+	Quantity int
 }

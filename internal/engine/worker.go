@@ -63,9 +63,9 @@ func Worker() {
 			balance := GetStockBalance(input.UserId)
 			output.StockBalance = balance
 		case "get_me":
-			inrBalance, stockBalance := GetMe(input.UserId)
+			inrBalance, portfolioItems := GetMe(input.UserId)
 			output.InrBalance = inrBalance
-			output.StockBalance = stockBalance
+			output.PortfolioItems = portfolioItems
 		}
 
 		outputJson, err := json.Marshal(output);

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -44,7 +43,7 @@ func VerifyJWT(publicKey string) gin.HandlerFunc {
 				return nil, jwt.ErrSignatureInvalid
 			}
 			return pubKey, nil
-		}, jwt.WithLeeway(5 * time.Second))
+		})
 
 		if err != nil || !token.Valid {
 			fmt.Println("JWT Parse Error:", err)

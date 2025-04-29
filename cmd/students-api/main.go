@@ -54,11 +54,11 @@ func main() {
 	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)
 	
 	router.POST("/api/v1/order/buy", middlewares.VerifyJWT(cfg.ClerkPubKey), order.BuyHandler)
-	router.POST("/api/v1/order/sell", order.SellHandler)
-	router.POST("/api/v1/order/on-ramp-inr", order.OnRampInrHandler)
-	router.GET("/api/v1/order/inr-balance", order.GetInrBalanceHandler)
-	router.GET("/api/v1/order/stock-balance", order.GetStockBalanceHandler)
-	router.GET("/api/v1/order/me", order.GetMeHandler)
+	router.POST("/api/v1/order/sell", middlewares.VerifyJWT(cfg.ClerkPubKey), order.SellHandler)
+	router.POST("/api/v1/order/on-ramp-inr", middlewares.VerifyJWT(cfg.ClerkPubKey), order.OnRampInrHandler)
+	router.GET("/api/v1/order/inr-balance", middlewares.VerifyJWT(cfg.ClerkPubKey), order.GetInrBalanceHandler)
+	router.GET("/api/v1/order/stock-balance", middlewares.VerifyJWT(cfg.ClerkPubKey), order.GetStockBalanceHandler)
+	router.GET("/api/v1/order/me", middlewares.VerifyJWT(cfg.ClerkPubKey), order.GetMeHandler)
 
 	router.GET("/api/v1/order/orderbook", order.GetOrderBookHandler)
 	router.GET("/api/v1/order/market", order.GetMarketHandler)

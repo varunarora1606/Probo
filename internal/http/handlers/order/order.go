@@ -273,13 +273,6 @@ func OnRampInrHandler(c *gin.Context) {
 }
 
 func GetInrBalanceHandler(c *gin.Context) {
-	var req struct {
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
-		return
-	}
 
 	result, err := worker(types.Input{
 		Fnx: "get_inr_balance",
@@ -301,13 +294,6 @@ func GetInrBalanceHandler(c *gin.Context) {
 }
 
 func GetStockBalanceHandler(c *gin.Context) {
-	var req struct {
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
-		return
-	}
 
 	result, err := worker(types.Input{
 		Fnx: "get_stock_balance",
@@ -329,13 +315,6 @@ func GetStockBalanceHandler(c *gin.Context) {
 }
 
 func GetMeHandler(c *gin.Context) {
-	var req struct {
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
-		return
-	}
 
 	result, err := worker(types.Input{
 		Fnx: "get_me",
@@ -352,7 +331,7 @@ func GetMeHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Stock balance fetched successfully",
-		"data":    gin.H{"stockBalance": result.StockBalance, "inrBalance": result.InrBalance},
+		"data":    gin.H{"inrBalance": result.InrBalance, "portfolioItems": result.PortfolioItems},
 	})
 	
 }

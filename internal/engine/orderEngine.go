@@ -142,14 +142,14 @@ func executeMarketOrder(
 
 		if orderDetails.Total <= quantity {
 			quantity -= orderDetails.Total
-			if err := executeTransaction(symbol, user, p, orderDetails.Total, transactionType, side); err != nil {
+			if err := executeTransaction(symbol, user, 100 - p, orderDetails.Total, transactionType, side); err != nil {
 				return err
 			}
-			delete(*oppositeSide, p)
 			dissolveOrders(symbol, orderDetails.Orders)
+			delete(*oppositeSide, p)
 		} else {
 			orderDetails.Total -= quantity
-			if err := executeTransaction(symbol, user, p, quantity, transactionType, side); err != nil {
+			if err := executeTransaction(symbol, user, 100 - p, quantity, transactionType, side); err != nil {
 				return err
 			}
 			orderDetails.Orders = updateOrders(symbol, orderDetails.Orders, &quantity)
