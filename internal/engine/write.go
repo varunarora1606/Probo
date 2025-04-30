@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
 
 func CreateMarket(symbol string, question string, endTime int64) error {
@@ -21,20 +22,20 @@ func CreateMarket(symbol string, question string, endTime int64) error {
 		return fmt.Errorf("symbol's market already exists")
 	}
 
-	memory.MarketBook.Data[symbol] = memory.SymbolBook{
+	memory.MarketBook.Data[symbol] = types.SymbolBook{
 		Question: question,
 		EndTime: endTime,
 	}
 
-	memory.OrderBook.Data[symbol] = memory.StockBook{
-		Yes: make(map[int]memory.OrderDetails),
-		No:  make(map[int]memory.OrderDetails),
+	memory.OrderBook.Data[symbol] = types.StockBook{
+		Yes: make(map[int]types.OrderDetails),
+		No:  make(map[int]types.OrderDetails),
 	}
 	
 	return nil
 }
 
-func OnRampInr(userId string, quantity int) memory.Balance {
+func OnRampInr(userId string, quantity int) types.Balance {
 	memory.InrBalance.Mu.Lock()
 	defer memory.InrBalance.Mu.Unlock()
 

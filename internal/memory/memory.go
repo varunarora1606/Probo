@@ -2,115 +2,48 @@ package memory
 
 import (
 	"sync"
+
+	"github.com/varunarora1606/Probo/internal/types"
 )
-
-type Side string
-
-const (
-	Yes Side = "yes"
-	No  Side = "no"
-)
-
-type OrderType string
-
-const (
-	Limit  OrderType = "limit"
-	Market OrderType = "market"
-)
-
-type TransactionType string
-
-const (
-	Buy  TransactionType = "buy"
-	Sell TransactionType = "sell"
-)
-
-type OrderDetails struct {
-	Total  int      `json:"total"`
-	Orders []string `json:"orders"` // int to BetDetails
-}
-type StockBook struct {
-	Yes map[int]OrderDetails `json:"yes"`
-	No  map[int]OrderDetails `json:"no"`
-}
-
-type Balance struct {
-	Quantity int `json:"quantity"`
-	Locked   int `json:"locked"`
-}
-
-type BetDetails struct {
-	UserId          string          `json:"userId"`
-	Price           int             `json:"price"`
-	Quantity        int             `json:"quantity"`
-	Side            Side            `json:"side"`
-	TransactionType TransactionType `json:"transactionType"`
-}
-
-type SymbolBook struct {
-	Question string
-	EndTime int64
-	YesClosing int
-	Volume int
-}
-
-type Delta struct {
-	Msg string      // remove, update, add  // Partially filled/ Fully filled/Unfilled (market)
-	OrderId string
-	Symbol string
-	Price int
-	Side Side
-	Quantity int
-}
-
-type MicroTrade struct {
-	Quantity int
-	Price int
-}
-
-type Trade struct {
-	TotalQuantity int
-	MicroTrades []MicroTrade
-}
 
 type OrderBookType struct {
 	Mu sync.RWMutex
-	Data map[string]StockBook
+	Data map[string]types.StockBook
 }
 type InrBalanceType struct {
 	Mu sync.RWMutex
-	Data map[string]Balance
+	Data map[string]types.Balance
 }
 type StockBalanceType struct {
 	Mu sync.RWMutex
-	Data map[string]map[string]map[Side]Balance
+	Data map[string]map[string]map[types.Side]types.Balance
 }
 type BetBookType struct {
 	Mu sync.RWMutex
-	Data map[string]BetDetails
+	Data map[string]types.BetDetails
 }
 
 type MarketBookType struct {
 	Mu sync.RWMutex
-	Data map[string]SymbolBook
+	Data map[string]types.SymbolBook
 }
 
 var OrderBook = OrderBookType {
-	Data: make(map[string]StockBook),
+	Data: make(map[string]types.StockBook),
 }
 
 var InrBalance = InrBalanceType {
-	Data: make(map[string]Balance),
+	Data: make(map[string]types.Balance),
 }
 
 var StockBalance = StockBalanceType {
-	Data: make(map[string]map[string]map[Side]Balance),
+	Data: make(map[string]map[string]map[types.Side]types.Balance),
 }
 
 var BetBook = BetBookType {
-	Data: make(map[string]BetDetails),
+	Data: make(map[string]types.BetDetails),
 }
 
 var MarketBook = MarketBookType {
-	Data: make(map[string]SymbolBook),
+	Data: make(map[string]types.SymbolBook),
 }

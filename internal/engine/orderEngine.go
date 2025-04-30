@@ -6,37 +6,38 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/varunarora1606/Probo/internal/memory"
+	"github.com/varunarora1606/Probo/internal/types"
 )
 
-var tempSymbolBook memory.SymbolBook
-var tempStockBook memory.StockBook
-var tempInrBalance map[string]memory.Balance
-var tempStockBalance map[string]map[string]map[memory.Side]memory.Balance
-var tempBetBook map[string]memory.BetDetails
+var tempSymbolBook types.SymbolBook
+var tempStockBook types.StockBook
+var tempInrBalance map[string]types.Balance
+var tempStockBalance map[string]map[string]map[types.Side]types.Balance
+var tempBetBook map[string]types.BetDetails
 
 // For WS
-// var deltas []memory.Delta
+var deltas []types.Delta
 
 // For Api
-var trade memory.Trade
+var trade types.Trade
 
-func flipSide(side memory.Side) memory.Side {
-	sideFlip := map[memory.Side]memory.Side{
-		memory.Yes: memory.No,
-		memory.No:  memory.Yes,
+func flipSide(side types.Side) types.Side {
+	sideFlip := map[types.Side]types.Side{
+		types.Yes: types.No,
+		types.No:  types.Yes,
 	}
 	return sideFlip[side]
 }
 
 func OrderEngine(
 	symbol string,
-	side memory.Side,
+	side types.Side,
 	price int,
 	user string,
 	quantity int,
-	orderType memory.OrderType,
-	transactionType memory.TransactionType,
-) (memory.Trade, error) {
+	orderType types.OrderType,
+	transactionType types.TransactionType,
+) (types.Trade, []types.Delta, error) {
 	// mutex
 	memory.MarketBook.Mu.Lock()
 	memory.OrderBook.Mu.Lock()
@@ -50,38 +51,39 @@ func OrderEngine(
 		memory.InrBalance.Mu.Unlock()
 		memory.StockBalance.Mu.Unlock()
 		memory.BetBook.Mu.Unlock()
-		tempSymbolBook = memory.SymbolBook{}
-		tempStockBook = memory.StockBook{}
-		tempInrBalance = make(map[string]memory.Balance)
-		tempStockBalance = make(map[string]map[string]map[memory.Side]memory.Balance)
-		tempBetBook = make(map[string]memory.BetDetails)
+		tempSymbolBook = types.SymbolBook{}
+		tempStockBook = types.StockBook{}
+		tempInrBalance = make(map[string]types.Balance)
+		tempStockBalance = make(map[string]map[string]map[types.Side]types.Balance)
+		tempBetBook = make(map[string]types.BetDetails)
 		fmt.Println("defer called")
-		trade = memory.Trade{}
+		trade = types.Trade{}
+		deltas = []types.Delta{}
 	}()
 	var err error = nil
 
 	tempSymbolBook, err = partialCopySymbolBook(symbol, memory.MarketBook.Data)
 	if err != nil {
-		return memory.Trade{}, err
+		return types.Trade{}, []types.Delta{}, err
 	}
 	tempStockBook, err = partialCopyStockBook(symbol, memory.OrderBook.Data)
 	if err != nil {
-		return memory.Trade{}, err
+		return types.Trade{}, []types.Delta{}, err
 	}
 	// TODO: Can be improved by adding only the necessary info at the time of requirement in below fnxs.
 	tempInrBalance = partialCopyInrBalance(memory.InrBalance.Data)
 	tempStockBalance = partialCopyStockBalance(memory.StockBalance.Data)
 	tempBetBook = partialCopyBetBook(memory.BetBook.Data)
 
-	if orderType == memory.Limit && transactionType == memory.Buy && tempInrBalance[user].Quantity < price * quantity {
-		return memory.Trade{}, fmt.Errorf("insufficient balance")
+	if orderType == types.Limit && transactionType == types.Buy && tempInrBalance[user].Quantity < price * quantity {
+		return types.Trade{}, []types.Delta{}, fmt.Errorf("insufficient balance")
 	}
-	if transactionType == memory.Sell && tempStockBalance[user][symbol][side].Quantity < quantity {
-		return memory.Trade{}, fmt.Errorf("insufficient stocks balance")
+	if transactionType == types.Sell && tempStockBalance[user][symbol][side].Quantity < quantity {
+		return types.Trade{}, []types.Delta{}, fmt.Errorf("insufficient stocks balance")
 	}
 
-	var currentSide, oppositeSide *map[int]memory.OrderDetails
-	if side == memory.Yes {
+	var currentSide, oppositeSide *map[int]types.OrderDetails
+	if side == types.Yes {
 		oppositeSide = &tempStockBook.No
 		currentSide = &tempStockBook.Yes
 	} else {
@@ -89,26 +91,26 @@ func OrderEngine(
 		currentSide = &tempStockBook.No
 	}
 
-	if transactionType == memory.Sell {
+	if transactionType == types.Sell {
 		tempSide := oppositeSide
 		oppositeSide = currentSide
 		currentSide = tempSide
 		price = 100 - price
 	}
 
-	if orderType == memory.Market {
+	if orderType == types.Market {
 		if err := executeMarketOrder(symbol, oppositeSide, user, quantity, transactionType, side); err != nil {
-			return memory.Trade{}, err
+			return types.Trade{}, []types.Delta{}, err
 		}
 
 		if trade.TotalQuantity < quantity {
-			return memory.Trade{}, fmt.Errorf("not enough liquidity available in the market")
+			return types.Trade{}, []types.Delta{}, fmt.Errorf("not enough liquidity available in the market")
 		}
 
 	} else {
 		// Mostly isme error nhi aega bcoz this have aalreaady been checked above
 		if err := executeLimitOrder(symbol, currentSide, oppositeSide, price, user, quantity, transactionType, side); err != nil {
-			return memory.Trade{}, err
+			return types.Trade{}, []types.Delta{}, err
 		}
 	}
 
@@ -120,16 +122,16 @@ func OrderEngine(
 	memory.StockBalance.Data = tempStockBalance
 	memory.BetBook.Data = tempBetBook
 
-	return trade, nil
+	return trade, deltas, nil
 }
 
 func executeMarketOrder(
 	symbol string,
-	oppositeSide *map[int]memory.OrderDetails,
+	oppositeSide *map[int]types.OrderDetails,
 	user string,
 	quantity int,
-	transactionType memory.TransactionType,
-	side memory.Side,
+	transactionType types.TransactionType,
+	side types.Side,
 ) error {
 	prices := make([]int, 0, len(*oppositeSide))
 	for p := range *oppositeSide {
@@ -165,32 +167,45 @@ func executeMarketOrder(
 
 func executeLimitOrder(
 	symbol string,
-	currentSide *map[int]memory.OrderDetails,
-	oppositeSide *map[int]memory.OrderDetails,
+	currentSide *map[int]types.OrderDetails,
+	oppositeSide *map[int]types.OrderDetails,
 	price int,
 	user string,
 	quantity int,
-	transactionType memory.TransactionType,
-	side memory.Side,
+	transactionType types.TransactionType,
+	side types.Side,
 ) error {
 	addToOrderBook := func(addQuantity int) {
-		orderID := uuid.NewString()
+		orderId := uuid.NewString()
 		side = flipSide(side)
-		tempBetBook[orderID] = memory.BetDetails{
+		tempBetBook[orderId] = types.BetDetails{
 			UserId:          user,
 			Price:           price,
 			Quantity:        quantity,
 			Side:            side, //TODO: iski side flip krni hai and then jha jha bet.Side use hua hai uski bhi flip karni hai
 			TransactionType: transactionType,
 		}
+		deltas = append(deltas, types.Delta{
+			Msg: "open",
+			Data: types.Order{
+				BetId: orderId,
+				EventId: uuid.NewString(),
+				UserID: user,
+				MarketID: symbol,
+				Side: side,
+				TransactionType: transactionType,
+				Price: price,
+				Quantity: quantity,
+			},
+		})
 		if orderDetails, exists := (*currentSide)[price]; !exists {
-			(*currentSide)[price] = memory.OrderDetails{
+			(*currentSide)[price] = types.OrderDetails{
 				Total:  addQuantity,
-				Orders: []string{orderID},
+				Orders: []string{orderId},
 			}
 		} else {
 			orderDetails.Total += addQuantity
-			orderDetails.Orders = append(orderDetails.Orders, orderID)
+			orderDetails.Orders = append(orderDetails.Orders, orderId)
 			(*currentSide)[price] = orderDetails
 		}
 	}
@@ -199,15 +214,15 @@ func executeLimitOrder(
 	orderDetails, exists := (*oppositeSide)[oppPrice]
 
 	if !exists {
+		addToOrderBook(quantity)
 		if err := lockUserFunds(symbol, user, price, quantity, transactionType, side); err != nil {
 			return err
 		}
-		addToOrderBook(quantity)
 		return nil
 	}
 
 	transactionPrice := price
-	if transactionType == memory.Sell {
+	if transactionType == types.Sell {
 		transactionPrice = 100 - price
 	}
 
@@ -237,8 +252,8 @@ func executeLimitOrder(
 	return nil
 }
 
-func lockUserFunds(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Side) error {
-	if transactionType == memory.Sell {
+func lockUserFunds(symbol, user string, price, quantity int, transactionType types.TransactionType, side types.Side) error {
+	if transactionType == types.Sell {
 		stockBalance := tempStockBalance[user][symbol][side]
 		stockBalance.Quantity -= quantity
 		stockBalance.Locked += quantity
@@ -256,19 +271,19 @@ func lockUserFunds(symbol, user string, price, quantity int, transactionType mem
 	return nil
 }
 
-func executeTransaction(symbol string, user string, price int, quantity int, transactionType memory.TransactionType, side memory.Side) error {
+func executeTransaction(symbol string, user string, price int, quantity int, transactionType types.TransactionType, side types.Side) error {
 	amount := price * quantity
-	if transactionType == memory.Sell {
+	if transactionType == types.Sell {
 		userInrBalance := tempInrBalance[user]
 		userInrBalance.Quantity += amount
 		tempInrBalance[user] = userInrBalance
 
 		if _, ok := tempStockBalance[user]; !ok {
-			tempStockBalance[user] = make(map[string]map[memory.Side]memory.Balance)
+			tempStockBalance[user] = make(map[string]map[types.Side]types.Balance)
 		}
 
 		if _, ok := tempStockBalance[user][symbol]; !ok {
-			tempStockBalance[user][symbol] = make(map[memory.Side]memory.Balance)
+			tempStockBalance[user][symbol] = make(map[types.Side]types.Balance)
 		}
 
 		stockBalance := tempStockBalance[user][symbol][side]
@@ -283,24 +298,24 @@ func executeTransaction(symbol string, user string, price int, quantity int, tra
 		tempInrBalance[user] = userInrBalance
 
 		if _, ok := tempStockBalance[user]; !ok {
-			tempStockBalance[user] = make(map[string]map[memory.Side]memory.Balance)
+			tempStockBalance[user] = make(map[string]map[types.Side]types.Balance)
 		}
 
 		if _, ok := tempStockBalance[user][symbol]; !ok {
-			tempStockBalance[user][symbol] = make(map[memory.Side]memory.Balance)
+			tempStockBalance[user][symbol] = make(map[types.Side]types.Balance)
 		}
 
 		stockBalance := tempStockBalance[user][symbol][side]
 		stockBalance.Quantity += quantity
 		tempStockBalance[user][symbol][side] = stockBalance
 	}
-	if side == memory.No {
+	if side == types.No {
 		tempSymbolBook.YesClosing = 100 - price
 	} else {
 		tempSymbolBook.YesClosing = price
 	}
 	trade.TotalQuantity += quantity
-	trade.MicroTrades = append(trade.MicroTrades, memory.MicroTrade{
+	trade.MicroTrades = append(trade.MicroTrades, types.MicroTrade{
 		Quantity: quantity,
 		Price: price,
 	})
@@ -313,6 +328,19 @@ func dissolveOrders(symbol string, orders []string) {
 		delete(tempBetBook, orderId)
 		// executeTransaction(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
 		adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, flipSide(bet.Side))
+		deltas = append(deltas, types.Delta{
+			Msg: "matched",
+			Data: types.Order{
+				BetId: orderId,
+				EventId: uuid.NewString(),
+				UserID: bet.UserId,
+				MarketID: symbol,
+				Side: bet.Side,
+				TransactionType: bet.TransactionType,
+				Price: bet.Price,
+				Quantity: bet.Quantity,
+			},
+		})
 	}
 }
 
@@ -330,10 +358,36 @@ func updateOrders(symbol string, orders []string, quantity *int) []string {
 			delete(tempBetBook, orderId)
 			// executeTransaction(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, bet.Side)
 			adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, flipSide(bet.Side))
+			deltas = append(deltas, types.Delta{
+				Msg: "matched",
+				Data: types.Order{
+					BetId: orderId,
+					EventId: uuid.NewString(),
+					UserID: bet.UserId,
+					MarketID: symbol,
+					Side: bet.Side,
+					TransactionType: bet.TransactionType,
+					Price: bet.Price,
+					Quantity: bet.Quantity,
+				},
+			})
 		} else {
 			bet.Quantity -= *quantity
 			// executeTransaction(symbol, bet.UserId, bet.Price, *quantity, bet.TransactionType, bet.Side)
 			adjustLockedBalance(symbol, bet.UserId, bet.Price, *quantity, bet.TransactionType, flipSide(bet.Side))
+			deltas = append(deltas, types.Delta{
+				Msg: "update",
+				Data: types.Order{
+					BetId: orderId,
+					EventId: uuid.NewString(),
+					UserID: bet.UserId,
+					MarketID: symbol,
+					Side: bet.Side,
+					TransactionType: bet.TransactionType,
+					Price: bet.Price,
+					Quantity: bet.Quantity,
+				},
+			})
 			tempBetBook[orderId] = bet
 			*quantity = 0
 			newOrders = append(newOrders, orderId)
@@ -342,18 +396,18 @@ func updateOrders(symbol string, orders []string, quantity *int) []string {
 	return newOrders
 }
 
-func adjustLockedBalance(symbol, user string, price, quantity int, transactionType memory.TransactionType, side memory.Side) {
-	if transactionType == memory.Sell {
+func adjustLockedBalance(symbol, user string, price, quantity int, transactionType types.TransactionType, side types.Side) {
+	if transactionType == types.Sell {
 		userInrBalance := tempInrBalance[user]
 		userInrBalance.Quantity += (100 - price) * quantity
 		tempInrBalance[user] = userInrBalance
 
 		if _, ok := tempStockBalance[user]; !ok {
-			tempStockBalance[user] = make(map[string]map[memory.Side]memory.Balance)
+			tempStockBalance[user] = make(map[string]map[types.Side]types.Balance)
 		}
 
 		if _, ok := tempStockBalance[user][symbol]; !ok {
-			tempStockBalance[user][symbol] = make(map[memory.Side]memory.Balance)
+			tempStockBalance[user][symbol] = make(map[types.Side]types.Balance)
 		}
 
 		stockBalance := tempStockBalance[user][symbol][side]
@@ -365,11 +419,11 @@ func adjustLockedBalance(symbol, user string, price, quantity int, transactionTy
 		tempInrBalance[user] = inrBalance
 
 		if _, ok := tempStockBalance[user]; !ok {
-			tempStockBalance[user] = make(map[string]map[memory.Side]memory.Balance)
+			tempStockBalance[user] = make(map[string]map[types.Side]types.Balance)
 		}
 
 		if _, ok := tempStockBalance[user][symbol]; !ok {
-			tempStockBalance[user][symbol] = make(map[memory.Side]memory.Balance)
+			tempStockBalance[user][symbol] = make(map[types.Side]types.Balance)
 		}
 
 		stockBalance := tempStockBalance[user][symbol][side]

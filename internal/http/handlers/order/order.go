@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/varunarora1606/Probo/internal/memory"
 	"github.com/varunarora1606/Probo/internal/types"
 )
 
@@ -14,8 +13,8 @@ type HandlerReq struct {
 	Symbol    string           `json:"symbol" binding:"required"` //symbol
 	Quantity  int              `json:"quantity" binding:"required,gt=0"` //Greater than 0 check
 	Price     int              `json:"price" binding:"gt=0"` //Greater than 0 check only with limit
-	StockSide memory.Side      `json:"stockSide" binding:"required,oneof=yes no"`       //side
-	StockType memory.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
+	StockSide types.Side      `json:"stockSide" binding:"required,oneof=yes no"`       //side
+	StockType types.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
 
 type CreateMarketHandlerReq struct {
@@ -45,12 +44,12 @@ func BuyHandler(c *gin.Context) {
 	result ,err := worker(types.Input{
 		Fnx: "order_engine",
 		Symbol: req.Symbol, 
-		StockSide: memory.Side(req.StockSide), 
+		StockSide: types.Side(req.StockSide), 
 		Price: req.Price, 
 		UserId: GetUserID(c), 
 		Quantity: req.Quantity, 
-		StockType: memory.OrderType(req.StockType), 
-		TransactionType: memory.Buy,
+		StockType: types.OrderType(req.StockType), 
+		TransactionType: types.Buy,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -61,7 +60,7 @@ func BuyHandler(c *gin.Context) {
 		return
 	}
 
-	if req.StockType == memory.Market {
+	if req.StockType == types.Market {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Buy request completed", 
 			"data": gin.H{
@@ -88,12 +87,12 @@ func SellHandler(c *gin.Context) {
 	result ,err := worker(types.Input{
 		Fnx: "order_engine",
 		Symbol: req.Symbol, 
-		StockSide: memory.Side(req.StockSide), 
+		StockSide: types.Side(req.StockSide), 
 		Price: req.Price, 
 		UserId: GetUserID(c), 
 		Quantity: req.Quantity, 
-		StockType: memory.OrderType(req.StockType), 
-		TransactionType: memory.Sell,
+		StockType: types.OrderType(req.StockType), 
+		TransactionType: types.Sell,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -106,7 +105,7 @@ func SellHandler(c *gin.Context) {
 
 	fmt.Println(result.Trade)
 	
-	if req.StockType == memory.Market {
+	if req.StockType == types.Market {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Sell request completed", 
 			"data": gin.H{

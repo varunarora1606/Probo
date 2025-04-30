@@ -7,41 +7,41 @@ import (
 	"github.com/varunarora1606/Probo/internal/types"
 )
 
-func GetMarket(symbol string) (memory.SymbolBook, error) {
+func GetMarket(symbol string) (types.SymbolBook, error) {
 	memory.MarketBook.Mu.RLock()
 	defer memory.MarketBook.Mu.RUnlock()
 
 	if symbolBook, exist := memory.MarketBook.Data[symbol]; !exist {
-		return memory.SymbolBook{}, fmt.Errorf("this market does not exist")
+		return types.SymbolBook{}, fmt.Errorf("this market does not exist")
 	} else {
 		return symbolBook, nil
 	}
 }
 
-func GetMarkets() (map[string]memory.SymbolBook) {
+func GetMarkets() (map[string]types.SymbolBook) {
 	memory.MarketBook.Mu.RLock()
 	defer memory.MarketBook.Mu.RUnlock()
 	
 	return memory.MarketBook.Data
 }
 
-func GetOrderBook(symbol string) (memory.StockBook, error) {
+func GetOrderBook(symbol string) (types.StockBook, error) {
 	memory.OrderBook.Mu.RLock()
 	defer memory.OrderBook.Mu.RUnlock()
 
 	if stockBook, exist := memory.OrderBook.Data[symbol]; !exist {
-		return memory.StockBook{}, fmt.Errorf("this market does not exist")
+		return types.StockBook{}, fmt.Errorf("this market does not exist")
 	} else {
 		return stockBook, nil
 	}
 }
 
-func GetInrBalance(userId string) (memory.Balance) {
+func GetInrBalance(userId string) (types.Balance) {
 	memory.InrBalance.Mu.RLock()
 	defer memory.InrBalance.Mu.RUnlock()
 	
 	if balance, exist := memory.InrBalance.Data[userId]; !exist {
-		return memory.Balance{
+		return types.Balance{
 			Quantity: 0,
 			Locked:   0,
 		}
@@ -50,7 +50,7 @@ func GetInrBalance(userId string) (memory.Balance) {
 	}
 }
 
-func GetStockBalance(userId string) (map[string]map[memory.Side]memory.Balance) {
+func GetStockBalance(userId string) (map[string]map[types.Side]types.Balance) {
 	memory.StockBalance.Mu.RLock()
 	defer memory.StockBalance.Mu.RUnlock()
 
@@ -61,7 +61,7 @@ func GetStockBalance(userId string) (map[string]map[memory.Side]memory.Balance) 
 	}
 }
 
-func GetMe(userId string) (memory.Balance, []types.PortfolioItem) {
+func GetMe(userId string) (types.Balance, []types.PortfolioItem) {
 	memory.StockBalance.Mu.RLock()
 	memory.InrBalance.Mu.RLock()
 	memory.MarketBook.Mu.RLock()
@@ -71,7 +71,7 @@ func GetMe(userId string) (memory.Balance, []types.PortfolioItem) {
 
 	inrBalance, exist := memory.InrBalance.Data[userId];
 	if !exist {
-		inrBalance = memory.Balance{
+		inrBalance = types.Balance{
 			Quantity: 0,
 			Locked:   0,
 		}
@@ -86,10 +86,10 @@ func GetMe(userId string) (memory.Balance, []types.PortfolioItem) {
 
 	for symbol, sideBalance := range stockBalance {
 		yesClosing := memory.MarketBook.Data[symbol].YesClosing
-		value := sideBalance[memory.Yes].Quantity*yesClosing + sideBalance[memory.No].Quantity*(100-yesClosing)
+		value := sideBalance[types.Yes].Quantity*yesClosing + sideBalance[types.No].Quantity*(100-yesClosing)
 		portfolioItems = append(portfolioItems, types.PortfolioItem{
 			Symbol: symbol,
-			Quantity: sideBalance[memory.Yes].Quantity + sideBalance[memory.No].Quantity,
+			Quantity: sideBalance[types.Yes].Quantity + sideBalance[types.No].Quantity,
 			Value: value,
 		})
 	}
