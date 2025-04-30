@@ -57,7 +57,7 @@ type SymbolBook struct {
 
 type Delta struct {
 	Msg string      // remove, update, add  // Partially filled/ Fully filled/Unfilled (market)
-	Data Order
+	Order Order
 }
 
 type MicroTrade struct {

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/varunarora1606/Probo/internal/database"
@@ -33,9 +34,10 @@ func Worker() {
 			output.Trade = trade
 			if err != nil {
 				output.Err = err.Error()
-				continue
+				fmt.Println(err.Error())
+			} else {
+				orderEvents = deltas
 			}
-			orderEvents = deltas
 		case "create_market":
 			err := CreateMarket(input.Symbol, input.Question, input.EndTime)
 			if err != nil {

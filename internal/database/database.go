@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/varunarora1606/Probo/internal/models"
 	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -26,6 +27,11 @@ func Connect(db_url string, redis_url string) {
 	}
 
 	fmt.Println("🚀 Connected to PostgreSQL successfully!")
+
+	err = DB.AutoMigrate(&models.Order{})
+    if err != nil {
+        log.Fatal("Failed to auto-migrate:", err)
+    }
 
 	opt, err := redis.ParseURL(redis_url)
 	if err != nil {

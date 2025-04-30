@@ -76,6 +76,8 @@ func main() {
 
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
+	go engine.Worker()
+	go database.Worker()
 	go func() {
 		fmt.Println("Server started")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -83,7 +85,6 @@ func main() {
 		}
 	}()
 
-	go engine.Worker()
 
 	<-done
 

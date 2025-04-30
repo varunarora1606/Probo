@@ -12,7 +12,7 @@ import (
 type HandlerReq struct {
 	Symbol    string           `json:"symbol" binding:"required"` //symbol
 	Quantity  int              `json:"quantity" binding:"required,gt=0"` //Greater than 0 check
-	Price     int              `json:"price" binding:"gt=0"` //Greater than 0 check only with limit
+	Price     int              `json:"price"`
 	StockSide types.Side      `json:"stockSide" binding:"required,oneof=yes no"`       //side
 	StockType types.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
@@ -38,6 +38,11 @@ func BuyHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
+		return
+	}
+
+	if req.StockType == types.Limit && (req.Price < 1 || req.Price > 99) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": "invalid price"})
 		return
 	}
 

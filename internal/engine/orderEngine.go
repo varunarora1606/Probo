@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/varunarora1606/Probo/internal/memory"
@@ -21,13 +22,13 @@ var deltas []types.Delta
 // For Api
 var trade types.Trade
 
-func flipSide(side types.Side) types.Side {
-	sideFlip := map[types.Side]types.Side{
-		types.Yes: types.No,
-		types.No:  types.Yes,
-	}
-	return sideFlip[side]
-}
+// func flipSide(side types.Side) types.Side {
+// 	sideFlip := map[types.Side]types.Side{
+// 		types.Yes: types.No,
+// 		types.No:  types.Yes,
+// 	}
+// 	return sideFlip[side]
+// }
 
 func OrderEngine(
 	symbol string,
@@ -51,6 +52,11 @@ func OrderEngine(
 		memory.InrBalance.Mu.Unlock()
 		memory.StockBalance.Mu.Unlock()
 		memory.BetBook.Mu.Unlock()
+		fmt.Println("tempBetBook:", tempSymbolBook)
+		fmt.Println("tempBetBook:",tempStockBook)
+		fmt.Println("tempInrBalance:",tempInrBalance)
+		fmt.Println("tempStockBalance:", tempStockBalance)
+		fmt.Println("tempBetBook:",tempBetBook)
 		tempSymbolBook = types.SymbolBook{}
 		tempStockBook = types.StockBook{}
 		tempInrBalance = make(map[string]types.Balance)
@@ -78,6 +84,7 @@ func OrderEngine(
 	if orderType == types.Limit && transactionType == types.Buy && tempInrBalance[user].Quantity < price * quantity {
 		return types.Trade{}, []types.Delta{}, fmt.Errorf("insufficient balance")
 	}
+	fmt.Println("transactionType:", transactionType)
 	if transactionType == types.Sell && tempStockBalance[user][symbol][side].Quantity < quantity {
 		return types.Trade{}, []types.Delta{}, fmt.Errorf("insufficient stocks balance")
 	}
@@ -177,17 +184,17 @@ func executeLimitOrder(
 ) error {
 	addToOrderBook := func(addQuantity int) {
 		orderId := uuid.NewString()
-		side = flipSide(side)
+		// flipedSide := flipSide(side)
 		tempBetBook[orderId] = types.BetDetails{
 			UserId:          user,
 			Price:           price,
 			Quantity:        quantity,
-			Side:            side, //TODO: iski side flip krni hai and then jha jha bet.Side use hua hai uski bhi flip karni hai
+			Side:            side, 
 			TransactionType: transactionType,
 		}
 		deltas = append(deltas, types.Delta{
 			Msg: "open",
-			Data: types.Order{
+			Order: types.Order{
 				BetId: orderId,
 				EventId: uuid.NewString(),
 				UserID: user,
@@ -196,6 +203,7 @@ func executeLimitOrder(
 				TransactionType: transactionType,
 				Price: price,
 				Quantity: quantity,
+				CreatedAt: time.Now(),
 			},
 		})
 		if orderDetails, exists := (*currentSide)[price]; !exists {
@@ -214,10 +222,10 @@ func executeLimitOrder(
 	orderDetails, exists := (*oppositeSide)[oppPrice]
 
 	if !exists {
-		addToOrderBook(quantity)
 		if err := lockUserFunds(symbol, user, price, quantity, transactionType, side); err != nil {
 			return err
 		}
+		addToOrderBook(quantity)
 		return nil
 	}
 
@@ -244,10 +252,10 @@ func executeLimitOrder(
 	}
 
 	if quantity > 0 {
-		addToOrderBook(quantity)
 		if err := lockUserFunds(symbol, user, price, quantity, transactionType, side); err != nil {
 			return err
 		}
+		addToOrderBook(quantity)
 	}
 	return nil
 }
@@ -327,10 +335,10 @@ func dissolveOrders(symbol string, orders []string) {
 		bet := tempBetBook[orderId]
 		delete(tempBetBook, orderId)
 		// executeTransaction(symbol, bet.UserId, price, bet.Quantity, bet.TransactionType, bet.Side)
-		adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, flipSide(bet.Side))
+		adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, (bet.Side))
 		deltas = append(deltas, types.Delta{
 			Msg: "matched",
-			Data: types.Order{
+			Order: types.Order{
 				BetId: orderId,
 				EventId: uuid.NewString(),
 				UserID: bet.UserId,
@@ -339,6 +347,7 @@ func dissolveOrders(symbol string, orders []string) {
 				TransactionType: bet.TransactionType,
 				Price: bet.Price,
 				Quantity: bet.Quantity,
+				CreatedAt: time.Now(),
 			},
 		})
 	}
@@ -357,10 +366,10 @@ func updateOrders(symbol string, orders []string, quantity *int) []string {
 			*quantity -= bet.Quantity
 			delete(tempBetBook, orderId)
 			// executeTransaction(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, bet.Side)
-			adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, flipSide(bet.Side))
+			adjustLockedBalance(symbol, bet.UserId, bet.Price, bet.Quantity, bet.TransactionType, (bet.Side))
 			deltas = append(deltas, types.Delta{
 				Msg: "matched",
-				Data: types.Order{
+				Order: types.Order{
 					BetId: orderId,
 					EventId: uuid.NewString(),
 					UserID: bet.UserId,
@@ -369,15 +378,16 @@ func updateOrders(symbol string, orders []string, quantity *int) []string {
 					TransactionType: bet.TransactionType,
 					Price: bet.Price,
 					Quantity: bet.Quantity,
+					CreatedAt: time.Now(),
 				},
 			})
 		} else {
 			bet.Quantity -= *quantity
 			// executeTransaction(symbol, bet.UserId, bet.Price, *quantity, bet.TransactionType, bet.Side)
-			adjustLockedBalance(symbol, bet.UserId, bet.Price, *quantity, bet.TransactionType, flipSide(bet.Side))
+			adjustLockedBalance(symbol, bet.UserId, bet.Price, *quantity, bet.TransactionType, (bet.Side))
 			deltas = append(deltas, types.Delta{
 				Msg: "update",
-				Data: types.Order{
+				Order: types.Order{
 					BetId: orderId,
 					EventId: uuid.NewString(),
 					UserID: bet.UserId,
@@ -386,6 +396,7 @@ func updateOrders(symbol string, orders []string, quantity *int) []string {
 					TransactionType: bet.TransactionType,
 					Price: bet.Price,
 					Quantity: bet.Quantity,
+					CreatedAt: time.Now(),
 				},
 			})
 			tempBetBook[orderId] = bet
