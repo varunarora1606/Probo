@@ -10,9 +10,9 @@ import (
 )
 
 type HandlerReq struct {
-	Symbol    string           `json:"symbol" binding:"required"` //symbol
-	Quantity  int              `json:"quantity" binding:"required,gt=0"` //Greater than 0 check
-	Price     int              `json:"price"`
+	Symbol    string          `json:"symbol" binding:"required"`        //symbol
+	Quantity  int             `json:"quantity" binding:"required,gt=0"` //Greater than 0 check
+	Price     int             `json:"price"`
 	StockSide types.Side      `json:"stockSide" binding:"required,oneof=yes no"`       //side
 	StockType types.OrderType `json:"stockType" binding:"required,oneof=market limit"` //ordertype
 }
@@ -20,7 +20,7 @@ type HandlerReq struct {
 type CreateMarketHandlerReq struct {
 	Question     string `json:"question" binding:"required"`
 	EndTimeMilli int64  `json:"endTime" binding:"required,gt=0"`
-	Symbol 		 string `json:"symbol" binding:"required"`
+	Symbol       string `json:"symbol" binding:"required"`
 }
 
 func GetUserID(c *gin.Context) string {
@@ -46,14 +46,14 @@ func BuyHandler(c *gin.Context) {
 		return
 	}
 
-	result ,err := worker(types.Input{
-		Fnx: "order_engine",
-		Symbol: req.Symbol, 
-		StockSide: types.Side(req.StockSide), 
-		Price: req.Price, 
-		UserId: GetUserID(c), 
-		Quantity: req.Quantity, 
-		StockType: types.OrderType(req.StockType), 
+	result, err := worker(types.Input{
+		Fnx:             "order_engine",
+		Symbol:          req.Symbol,
+		StockSide:       types.Side(req.StockSide),
+		Price:           req.Price,
+		UserId:          GetUserID(c),
+		Quantity:        req.Quantity,
+		StockType:       types.OrderType(req.StockType),
 		TransactionType: types.Buy,
 	})
 	if err != nil {
@@ -67,7 +67,7 @@ func BuyHandler(c *gin.Context) {
 
 	if req.StockType == types.Market {
 		c.JSON(http.StatusCreated, gin.H{
-			"message": "Buy request completed", 
+			"message": "Buy request completed",
 			"data": gin.H{
 				"trades": result.Trade.MicroTrades,
 			},
@@ -75,8 +75,8 @@ func BuyHandler(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusCreated, gin.H{"message": "Buy request completed", "data": gin.H{
 			"completed": result.Trade.TotalQuantity,
-			"pending": req.Quantity - result.Trade.TotalQuantity,
-			},
+			"pending":   req.Quantity - result.Trade.TotalQuantity,
+		},
 		})
 	}
 }
@@ -89,14 +89,14 @@ func SellHandler(c *gin.Context) {
 		return
 	}
 
-	result ,err := worker(types.Input{
-		Fnx: "order_engine",
-		Symbol: req.Symbol, 
-		StockSide: types.Side(req.StockSide), 
-		Price: req.Price, 
-		UserId: GetUserID(c), 
-		Quantity: req.Quantity, 
-		StockType: types.OrderType(req.StockType), 
+	result, err := worker(types.Input{
+		Fnx:             "order_engine",
+		Symbol:          req.Symbol,
+		StockSide:       types.Side(req.StockSide),
+		Price:           req.Price,
+		UserId:          GetUserID(c),
+		Quantity:        req.Quantity,
+		StockType:       types.OrderType(req.StockType),
 		TransactionType: types.Sell,
 	})
 	if err != nil {
@@ -109,10 +109,10 @@ func SellHandler(c *gin.Context) {
 	}
 
 	fmt.Println(result.Trade)
-	
+
 	if req.StockType == types.Market {
 		c.JSON(http.StatusCreated, gin.H{
-			"message": "Sell request completed", 
+			"message": "Sell request completed",
 			"data": gin.H{
 				"trades": result.Trade.MicroTrades,
 			},
@@ -120,8 +120,8 @@ func SellHandler(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusCreated, gin.H{"message": "Sell request completed", "data": gin.H{
 			"completed": result.Trade.TotalQuantity,
-			"pending": req.Quantity - result.Trade.TotalQuantity,
-			},
+			"pending":   req.Quantity - result.Trade.TotalQuantity,
+		},
 		})
 	}
 }
@@ -137,7 +137,7 @@ func GetMarketHandler(c *gin.Context) {
 	}
 
 	result, err := worker(types.Input{
-		Fnx: "get_market",
+		Fnx:    "get_market",
 		Symbol: req.Symbol,
 	})
 	if err != nil {
@@ -153,7 +153,7 @@ func GetMarketHandler(c *gin.Context) {
 		"message": "Market fetched successfully",
 		"data":    gin.H{"market": result.Market},
 	})
-	
+
 }
 
 func GetMarketsHandler(c *gin.Context) {
@@ -176,18 +176,15 @@ func GetMarketsHandler(c *gin.Context) {
 }
 
 func GetOrderBookHandler(c *gin.Context) {
-	var req struct {
-		Symbol string `json:"symbol" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Validation error", "error": err.Error()})
+	symbol := c.Query("symbol")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing symbol"})
 		return
 	}
 
 	result, err := worker(types.Input{
-		Fnx: "get_orderbook",
-		Symbol: req.Symbol,
+		Fnx:    "get_orderbook",
+		Symbol: symbol,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -222,10 +219,10 @@ func CreateMarketHandler(c *gin.Context) {
 	// TODO: Check and Add to DB
 
 	result, err := worker(types.Input{
-		Fnx: "create_market",
-		Symbol: req.Symbol,
+		Fnx:      "create_market",
+		Symbol:   req.Symbol,
 		Question: req.Question,
-		EndTime: endTime.UnixNano(),
+		EndTime:  endTime.UnixNano(),
 	})
 
 	if err != nil {
@@ -257,9 +254,9 @@ func OnRampInrHandler(c *gin.Context) {
 	// TODO: Add to DB
 
 	result, err := worker(types.Input{
-		Fnx: "on_ramp_inr",
+		Fnx:      "on_ramp_inr",
 		Quantity: req.Quantity,
-		UserId: GetUserID(c),
+		UserId:   GetUserID(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -279,7 +276,7 @@ func OnRampInrHandler(c *gin.Context) {
 func GetInrBalanceHandler(c *gin.Context) {
 
 	result, err := worker(types.Input{
-		Fnx: "get_inr_balance",
+		Fnx:    "get_inr_balance",
 		UserId: GetUserID(c),
 	})
 	if err != nil {
@@ -300,7 +297,7 @@ func GetInrBalanceHandler(c *gin.Context) {
 func GetStockBalanceHandler(c *gin.Context) {
 
 	result, err := worker(types.Input{
-		Fnx: "get_stock_balance",
+		Fnx:    "get_stock_balance",
 		UserId: GetUserID(c),
 	})
 	if err != nil {
@@ -321,7 +318,7 @@ func GetStockBalanceHandler(c *gin.Context) {
 func GetMeHandler(c *gin.Context) {
 
 	result, err := worker(types.Input{
-		Fnx: "get_me",
+		Fnx:    "get_me",
 		UserId: GetUserID(c),
 	})
 	if err != nil {
@@ -337,7 +334,7 @@ func GetMeHandler(c *gin.Context) {
 		"message": "Stock balance fetched successfully",
 		"data":    gin.H{"inrBalance": result.InrBalance, "portfolioItems": result.PortfolioItems},
 	})
-	
+
 }
 
 func CancelBuyOrderHandler(c *gin.Context) {

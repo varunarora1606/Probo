@@ -8,12 +8,10 @@ import (
 	"github.com/varunarora1606/Probo/internal/types"
 )
 
-
-
 func worker(input types.Input) (types.Output, error) {
 
-	inputJson, err := json.Marshal(input);
-	if  err != nil {
+	inputJson, err := json.Marshal(input)
+	if err != nil {
 		return types.Output{}, fmt.Errorf("error during marshalling: %v", err)
 	}
 

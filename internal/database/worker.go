@@ -9,13 +9,13 @@ import (
 	"github.com/varunarora1606/Probo/internal/types"
 )
 
-var batchSize int = 20;
+var batchSize int = 20
 
 func Worker() {
 	for {
-		var openOrders []types.Order = []types.Order{};
-		var updateOrders []types.Order = []types.Order{};
-		var matchedOrders []types.Order = []types.Order{};
+		var openOrders []types.Order = []types.Order{}
+		var updateOrders []types.Order = []types.Order{}
+		var matchedOrders []types.Order = []types.Order{}
 		result, err := RClient.BRPop(Ctx, 0, "order_events").Result()
 		if err != nil {
 			fmt.Println("error during BRPOP on 'order_events':", err.Error())
@@ -105,15 +105,15 @@ func convertTypesInModels(typesOrders []types.Order) []models.Order {
 	var modelOrders []models.Order
 	for _, o := range typesOrders {
 		modelOrders = append(modelOrders, models.Order{
-			BetId:    o.BetId,
-			EventId:  o.EventId,
-			UserID:   o.UserID,
-			MarketID: o.MarketID,
-			Side:     o.Side,
-			Price:    o.Price,
-			Quantity: o.Quantity,
+			BetId:           o.BetId,
+			EventId:         o.EventId,
+			UserID:          o.UserID,
+			Symbol:          o.Symbol,
+			Side:            o.Side,
+			Price:           o.Price,
+			Quantity:        o.Quantity,
 			TransactionType: o.TransactionType,
-			CreatedAt: o.CreatedAt,
+			CreatedAt:       o.CreatedAt,
 		})
 	}
 	return modelOrders

@@ -15,7 +15,7 @@ func partialCopyStockBook(symbol string, original map[string]types.StockBook) (t
 
 	copy := types.StockBook{
 		Yes: make(map[int]types.OrderDetails),
-		No: make(map[int]types.OrderDetails),
+		No:  make(map[int]types.OrderDetails),
 	}
 
 	for price, orderDetails := range stockBook.Yes {
@@ -41,7 +41,7 @@ func partialCopyInrBalance(original map[string]types.Balance) map[string]types.B
 	for userId, balance := range original {
 		copy[userId] = types.Balance{
 			Quantity: balance.Quantity,
-			Locked: balance.Locked,
+			Locked:   balance.Locked,
 		}
 	}
 	return copy
@@ -57,7 +57,7 @@ func partialCopyStockBalance(original map[string]map[string]map[types.Side]types
 			for side, balance := range sideDetails {
 				newSideDetails[side] = types.Balance{
 					Quantity: balance.Quantity,
-					Locked: balance.Locked,
+					Locked:   balance.Locked,
 				}
 			}
 			newSymbolDetails[symbol] = newSideDetails
@@ -73,10 +73,10 @@ func partialCopyBetBook(original map[string]types.BetDetails) map[string]types.B
 
 	for betId, betDetails := range original {
 		copy[betId] = types.BetDetails{
-			UserId: betDetails.UserId,
-			Price: betDetails.Price,
-			Quantity: betDetails.Quantity,
-			Side: betDetails.Side,
+			UserId:          betDetails.UserId,
+			Price:           betDetails.Price,
+			Quantity:        betDetails.Quantity,
+			Side:            betDetails.Side,
 			TransactionType: betDetails.TransactionType,
 		}
 	}
@@ -94,11 +94,10 @@ func partialCopySymbolBook(symbol string, original map[string]types.SymbolBook) 
 		return types.SymbolBook{}, fmt.Errorf("market have expired")
 	}
 
-
 	return types.SymbolBook{
-		Question: symbolBook.Question,
-		EndTime: symbolBook.EndTime,
+		Question:   symbolBook.Question,
+		EndTime:    symbolBook.EndTime,
 		YesClosing: symbolBook.YesClosing,
-		Volume: symbolBook.Volume,
+		Volume:     symbolBook.Volume,
 	}, nil
 }

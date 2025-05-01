@@ -49,34 +49,34 @@ type BetDetails struct {
 }
 
 type SymbolBook struct {
-	Question string
-	EndTime int64
+	Question   string
+	EndTime    int64
 	YesClosing int
-	Volume int
+	Volume     int
 }
 
 type Delta struct {
-	Msg string      // remove, update, add  // Partially filled/ Fully filled/Unfilled (market)
+	Msg   string // remove, update, add  // Partially filled/ Fully filled/Unfilled (market)
 	Order Order
 }
 
 type MicroTrade struct {
 	Quantity int
-	Price int
+	Price    int
 }
 
 type Trade struct {
 	TotalQuantity int
-	MicroTrades []MicroTrade
+	MicroTrades   []MicroTrade
 }
 
 type Input struct {
-	ApiId           string  //It should be InputId
+	ApiId           string //It should be InputId
 	Fnx             string
 	UserId          string
 	Symbol          string
-	Question string
-	EndTime int64
+	Question        string
+	EndTime         int64
 	Quantity        int
 	Price           int
 	StockSide       Side
@@ -85,35 +85,34 @@ type Input struct {
 }
 
 type Output struct {
-	ForWs bool
-	ApiId string
-	Err string
-	Market SymbolBook
-	Markets map[string]SymbolBook
-	StockBook StockBook
-	InrBalance Balance
-	StockBalance map[string]map[Side]Balance
+	ForWs          bool
+	ApiId          string
+	Err            string
+	Market         SymbolBook
+	Markets        map[string]SymbolBook
+	StockBook      StockBook
+	InrBalance     Balance
+	StockBalance   map[string]map[Side]Balance
 	PortfolioItems []PortfolioItem
-	Deltas []Delta
-	Trade Trade
+	Deltas         []Delta
+	Trade          Trade
 }
 
 type PortfolioItem struct {
-	Symbol string	`json:"symbol"`
-	Value int		`json:"value"`
-	Quantity int	`json:"quantity"`
+	Symbol   string `json:"symbol"`
+	Value    int    `json:"value"`
+	Quantity int    `json:"quantity"`
 }
 
 type Order struct {
-	BetId    string 	`gorm:"primaryKey"` //BetId
-	EventId  string	
-    UserID   string	
-    MarketID string	
-    Side     Side		
-	TransactionType TransactionType 
-    Price    int		
-    Quantity int		
-    // Status   string		
+	BetId           string `gorm:"primaryKey"` //BetId
+	EventId         string
+	UserID          string
+	Symbol          string
+	Side            Side
+	TransactionType TransactionType
+	Price           int
+	Quantity        int
+	// Status   string
 	CreatedAt time.Time
 }
-

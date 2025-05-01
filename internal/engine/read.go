@@ -18,10 +18,10 @@ func GetMarket(symbol string) (types.SymbolBook, error) {
 	}
 }
 
-func GetMarkets() (map[string]types.SymbolBook) {
+func GetMarkets() map[string]types.SymbolBook {
 	memory.MarketBook.Mu.RLock()
 	defer memory.MarketBook.Mu.RUnlock()
-	
+
 	return memory.MarketBook.Data
 }
 
@@ -36,10 +36,10 @@ func GetOrderBook(symbol string) (types.StockBook, error) {
 	}
 }
 
-func GetInrBalance(userId string) (types.Balance) {
+func GetInrBalance(userId string) types.Balance {
 	memory.InrBalance.Mu.RLock()
 	defer memory.InrBalance.Mu.RUnlock()
-	
+
 	if balance, exist := memory.InrBalance.Data[userId]; !exist {
 		return types.Balance{
 			Quantity: 0,
@@ -50,7 +50,7 @@ func GetInrBalance(userId string) (types.Balance) {
 	}
 }
 
-func GetStockBalance(userId string) (map[string]map[types.Side]types.Balance) {
+func GetStockBalance(userId string) map[string]map[types.Side]types.Balance {
 	memory.StockBalance.Mu.RLock()
 	defer memory.StockBalance.Mu.RUnlock()
 
@@ -69,7 +69,7 @@ func GetMe(userId string) (types.Balance, []types.PortfolioItem) {
 	defer memory.InrBalance.Mu.RUnlock()
 	defer memory.StockBalance.Mu.RUnlock()
 
-	inrBalance, exist := memory.InrBalance.Data[userId];
+	inrBalance, exist := memory.InrBalance.Data[userId]
 	if !exist {
 		inrBalance = types.Balance{
 			Quantity: 0,
@@ -79,7 +79,7 @@ func GetMe(userId string) (types.Balance, []types.PortfolioItem) {
 
 	portfolioItems := []types.PortfolioItem{}
 
-	stockBalance, exist := memory.StockBalance.Data[userId]; 
+	stockBalance, exist := memory.StockBalance.Data[userId]
 	if !exist {
 		stockBalance = nil
 	}
@@ -88,12 +88,11 @@ func GetMe(userId string) (types.Balance, []types.PortfolioItem) {
 		yesClosing := memory.MarketBook.Data[symbol].YesClosing
 		value := sideBalance[types.Yes].Quantity*yesClosing + sideBalance[types.No].Quantity*(100-yesClosing)
 		portfolioItems = append(portfolioItems, types.PortfolioItem{
-			Symbol: symbol,
+			Symbol:   symbol,
 			Quantity: sideBalance[types.Yes].Quantity + sideBalance[types.No].Quantity,
-			Value: value,
+			Value:    value,
 		})
 	}
-
 
 	return inrBalance, portfolioItems
 }

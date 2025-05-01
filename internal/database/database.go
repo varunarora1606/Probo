@@ -29,9 +29,9 @@ func Connect(db_url string, redis_url string) {
 	fmt.Println("🚀 Connected to PostgreSQL successfully!")
 
 	err = DB.AutoMigrate(&models.Order{})
-    if err != nil {
-        log.Fatal("Failed to auto-migrate:", err)
-    }
+	if err != nil {
+		log.Fatal("Failed to auto-migrate:", err)
+	}
 
 	opt, err := redis.ParseURL(redis_url)
 	if err != nil {

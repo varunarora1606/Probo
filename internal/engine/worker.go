@@ -25,8 +25,8 @@ func Worker() {
 			continue
 		}
 
-		var output types.Output;
-		var orderEvents []types.Delta;
+		var output types.Output
+		var orderEvents []types.Delta
 
 		switch input.Fnx {
 		case "order_engine":
@@ -54,7 +54,7 @@ func Worker() {
 			}
 		case "get_markets":
 			markets := GetMarkets()
-			output.Markets =  markets
+			output.Markets = markets
 		case "get_orderbook":
 			stockBook, err := GetOrderBook(input.Symbol)
 			output.StockBook = stockBook
@@ -73,8 +73,8 @@ func Worker() {
 			output.PortfolioItems = portfolioItems
 		}
 
-		outputJson, err := json.Marshal(output);
-		if  err != nil {
+		outputJson, err := json.Marshal(output)
+		if err != nil {
 			log.Printf("Error during marshalling of %v in 'output': %v", output, err)
 			continue
 		}
@@ -84,7 +84,7 @@ func Worker() {
 			log.Printf("Error during LPUSH on 'output': %v", err)
 			continue
 		}
-		
+
 		if len(orderEvents) > 0 {
 			var redisPayload []interface{}
 			for _, event := range orderEvents {
@@ -95,7 +95,7 @@ func Worker() {
 				}
 				redisPayload = append(redisPayload, jsonEvent)
 			}
-	
+
 			err = database.RClient.LPush(database.Ctx, "order_events", redisPayload...).Err()
 			if err != nil {
 				log.Printf("Error during LPUSH on 'order_events': %v", err)

@@ -29,7 +29,6 @@ func main() {
 	// }
 	cfg := config.MustLoad()
 
-
 	// Db setup
 	database.Connect(cfg.DBUrl, cfg.RedisUrl)
 	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
@@ -44,15 +43,15 @@ func main() {
 	// router.POST("/api/v1/user/logout", user.Logout)
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:3000"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,  // Allow credentials (cookies, authorization headers, etc.)
-		MaxAge: 12 * time.Hour,   // Cache preflight response for 12 hours
+		AllowCredentials: true,           // Allow credentials (cookies, authorization headers, etc.)
+		MaxAge:           12 * time.Hour, // Cache preflight response for 12 hours
 	}))
 
 	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)
-	
+
 	router.POST("/api/v1/order/buy", middlewares.VerifyJWT(cfg.ClerkPubKey), order.BuyHandler)
 	router.POST("/api/v1/order/sell", middlewares.VerifyJWT(cfg.ClerkPubKey), order.SellHandler)
 	router.POST("/api/v1/order/on-ramp-inr", middlewares.VerifyJWT(cfg.ClerkPubKey), order.OnRampInrHandler)
@@ -84,7 +83,6 @@ func main() {
 			log.Fatal("Failed to start server", err.Error())
 		}
 	}()
-
 
 	<-done
 

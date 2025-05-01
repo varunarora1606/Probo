@@ -24,14 +24,14 @@ func CreateMarket(symbol string, question string, endTime int64) error {
 
 	memory.MarketBook.Data[symbol] = types.SymbolBook{
 		Question: question,
-		EndTime: endTime,
+		EndTime:  endTime,
 	}
 
 	memory.OrderBook.Data[symbol] = types.StockBook{
 		Yes: make(map[int]types.OrderDetails),
 		No:  make(map[int]types.OrderDetails),
 	}
-	
+
 	return nil
 }
 
@@ -40,7 +40,7 @@ func OnRampInr(userId string, quantity int) types.Balance {
 	defer memory.InrBalance.Mu.Unlock()
 
 	userBalance := memory.InrBalance.Data[userId]
-	userBalance.Quantity += quantity;
+	userBalance.Quantity += quantity
 	memory.InrBalance.Data[userId] = userBalance
 
 	return userBalance

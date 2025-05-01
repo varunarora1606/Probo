@@ -13,14 +13,14 @@ type HTTPServer struct {
 }
 
 type Config struct {
-	Env        string `yaml:"env" env:"ENV" env-required:"true" env-default:"production"`
-	DBUrl      string `yaml:"db_url" env:"DB_URL" env-required:"true"`
-	RedisUrl   string `yaml:"redis_url" env:"REDIS_URL" env-required:"true"`
+	Env         string `yaml:"env" env:"ENV" env-required:"true" env-default:"production"`
+	DBUrl       string `yaml:"db_url" env:"DB_URL" env-required:"true"`
+	RedisUrl    string `yaml:"redis_url" env:"REDIS_URL" env-required:"true"`
 	ClerkPubKey string `yaml:"clerk_public_key"`
-	HTTPServer `yaml:"http_server"`
+	HTTPServer  `yaml:"http_server"`
 }
 
-func MustLoad() *Config {	
+func MustLoad() *Config {
 	var configpath string
 
 	configpath = os.Getenv("CONFIG_PATH")

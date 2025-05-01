@@ -7,43 +7,43 @@ import (
 )
 
 type OrderBookType struct {
-	Mu sync.RWMutex
+	Mu   sync.RWMutex
 	Data map[string]types.StockBook
 }
 type InrBalanceType struct {
-	Mu sync.RWMutex
+	Mu   sync.RWMutex
 	Data map[string]types.Balance
 }
 type StockBalanceType struct {
-	Mu sync.RWMutex
+	Mu   sync.RWMutex
 	Data map[string]map[string]map[types.Side]types.Balance
 }
 type BetBookType struct {
-	Mu sync.RWMutex
+	Mu   sync.RWMutex
 	Data map[string]types.BetDetails
 }
 
 type MarketBookType struct {
-	Mu sync.RWMutex
+	Mu   sync.RWMutex
 	Data map[string]types.SymbolBook
 }
 
-var OrderBook = OrderBookType {
+var OrderBook = OrderBookType{
 	Data: make(map[string]types.StockBook),
 }
 
-var InrBalance = InrBalanceType {
+var InrBalance = InrBalanceType{
 	Data: make(map[string]types.Balance),
 }
 
-var StockBalance = StockBalanceType {
+var StockBalance = StockBalanceType{
 	Data: make(map[string]map[string]map[types.Side]types.Balance),
 }
 
-var BetBook = BetBookType {
+var BetBook = BetBookType{
 	Data: make(map[string]types.BetDetails),
 }
 
-var MarketBook = MarketBookType {
+var MarketBook = MarketBookType{
 	Data: make(map[string]types.SymbolBook),
 }
