@@ -58,6 +58,7 @@ func main() {
 	router.GET("/api/v1/order/market", order.GetMarketHandler)
 	router.GET("/api/v1/order/markets", order.GetMarketsHandler)
 
+	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
