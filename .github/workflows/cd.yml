@@ -58,7 +58,6 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-
           # Set up SSH key
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
