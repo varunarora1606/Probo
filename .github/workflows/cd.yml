@@ -77,6 +77,7 @@ jobs:
           # SSH into EC2 and manage Docker container
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             # Pull the latest Docker image with the commit hash tag
+            cd /app
             echo "Pulling Docker image: varunarora1606/probo:${{ github.sha }}"
             sudo docker pull varunarora1606/probo:${{ github.sha }}
 
