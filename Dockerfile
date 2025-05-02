@@ -22,6 +22,8 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/main .
+ARG DOCKER_CONFIG_PATH
+COPY ${DOCKER_CONFIG_PATH} /config/docker.yaml
 
 EXPOSE 8000
 
