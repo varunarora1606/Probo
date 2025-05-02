@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 ARG DOCKER_CONFIG_PATH
-RUN mkdir -p /app/config
+RUN mkdir -p config
 COPY ${DOCKER_CONFIG_PATH} config/docker.yaml
 
 EXPOSE 8000
