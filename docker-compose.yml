@@ -12,7 +12,7 @@ services:
       - postgres
       - redis
     environment:
-      - CONFIG_PATH=config/docker.yaml
+      - CONFIG_PATH=config/docker.yaml  # I am not pushing config file into the github and dockerhub
 
   postgres:
     image: postgres:15

@@ -44,6 +44,13 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+      - name: Write config file from base64
+        run: |
+          mkdir -p config
+          echo "$DOCKER_CONFIG_YAML" | base64 -d > config/docker.yaml
+        env:
+          DOCKER_CONFIG_YAML: ${{ secrets.DOCKER_CONFIG_YAML }}
+
       - name: Build Docker image
         run: docker build -t varunarora1606/probo:${{ github.sha }} .
 
