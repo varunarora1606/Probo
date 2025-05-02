@@ -38,7 +38,7 @@ func main() {
 	// router.POST("/api/v1/user/logout", user.Logout)
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{cfg.AllowedOrigins},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,           // Allow credentials (cookies, authorization headers, etc.)
@@ -57,6 +57,10 @@ func main() {
 	router.GET("/api/v1/order/orderbook", order.GetOrderBookHandler)
 	router.GET("/api/v1/order/market", order.GetMarketHandler)
 	router.GET("/api/v1/order/markets", order.GetMarketsHandler)
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// Setup server
 	server := http.Server{

@@ -13,9 +13,10 @@ type HTTPServer struct {
 }
 
 type Config struct {
-	Env         string `yaml:"env" env:"ENV" env-required:"true" env-default:"production"`
+	Env         string `yaml:"env" env:"ENV" env-required:"true" env-default:"prod"`
 	DBUrl       string `yaml:"db_url" env:"DB_URL" env-required:"true"`
 	RedisUrl    string `yaml:"redis_url" env:"REDIS_URL" env-required:"true"`
+	AllowedOrigins string `yaml:"allowed_origins" env:"ALLOWED_ORIGINS" env-required:"true" env-default:"*"`
 	ClerkPubKey string `yaml:"clerk_public_key"`
 	HTTPServer  `yaml:"http_server"`
 }
