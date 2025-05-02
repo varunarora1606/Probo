@@ -87,5 +87,5 @@ jobs:
 
             # Run the new container in detached mode
             echo "Starting new container 'probo' with commit tag: ${GITHUB_SHA}"
-            sudo docker run -d --restart always --name probo -e CONFIG_PATH=config/docker.yaml -p 8000:8000 varunarora1606/probo:${{ github.sha }}
+            sudo docker run -d --restart always --name probo --network probo-net -e CONFIG_PATH=config/docker.yaml -p 8000:8000 varunarora1606/probo:${{ github.sha }}
           EOF
