@@ -71,14 +71,14 @@ jobs:
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             # Pull the latest Docker image with the commit hash tag
             echo "Pulling Docker image: varunarora1606/probo:${{ github.sha }}"
-            docker pull varunarora1606/probo:${{ github.sha }}
+            sudo docker pull varunarora1606/probo:${{ github.sha }}
 
             # Stop and remove the existing container if it exists
-            echo "Stopping and removing existing container 'probo' if any..."
-            docker stop probo || true
-            docker rm probo || true
+            sudo echo "Stopping and removing existing container 'probo' if any..."
+            sudo docker stop probo || true
+            sudo docker rm probo || true
 
             # Run the new container in detached mode
             echo "Starting new container 'probo' with commit tag: ${GITHUB_SHA}"
-            docker run -d --restart always --name probo -p 8000:8000 varunarora1606/probo:${{ github.sha }}
+            sudo docker run -d --restart always --name probo -p 8000:8000 varunarora1606/probo:${{ github.sha }}
           EOF
