@@ -22,7 +22,6 @@ import (
 )
 
 func main() {
-	
 	cfg := config.MustLoad()
 
 	// Db setup
