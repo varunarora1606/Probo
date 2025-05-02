@@ -80,12 +80,17 @@ jobs:
             echo "Pulling Docker image: varunarora1606/probo:${{ github.sha }}"
             sudo docker pull varunarora1606/probo:${{ github.sha }}
 
-            # Stop and remove the existing container if it exists
-            sudo echo "Stopping and removing existing container 'probo' if any..."
-            sudo docker stop probo || true
-            sudo docker rm probo || true
+            # # Stop and remove the existing container if it exists
+            # sudo echo "Stopping and removing existing container 'probo' if any..."
+            # sudo docker stop probo || true
+            # sudo docker rm probo || true
 
-            # Run the new container in detached mode
-            echo "Starting new container 'probo' with commit tag: ${GITHUB_SHA}"
-            sudo docker run -d --restart always --name probo -e CONFIG_PATH=config/docker.yaml -p 8000:8000 varunarora1606/probo:${{ github.sha }}
+            # # Run the new container in detached mode
+            # echo "Starting new container 'probo' with commit tag: ${GITHUB_SHA}"
+            # sudo docker run -d --restart always --name probo -e CONFIG_PATH=app/config/docker.yaml -p 8000:8000 varunarora1606/probo:${{ github.sha }}
+
+            echo "Recreating services with docker-compose..."
+            export GITHUB_SHA=${{ github.sha }}
+            sudo docker-compose down
+            sudo docker-compose up -d --build
           EOF
