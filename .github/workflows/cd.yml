@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Set up Docker Compose
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version  # Verify installation
+
       - name: Start services
         run: docker-compose up -d --build
 
@@ -52,8 +58,6 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          # Install SSH client if not already installed
-          sudo apt-get install -y openssh-client
 
           # Set up SSH key
           mkdir -p ~/.ssh
@@ -64,7 +68,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
 
           # SSH into EC2 and manage Docker container
-          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             # Pull the latest Docker image with the commit hash tag
             echo "Pulling Docker image: varunarora1606/probo:${{ github.sha }}"
             docker pull varunarora1606/probo:${{ github.sha }}
