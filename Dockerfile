@@ -25,6 +25,7 @@ COPY --from=builder /app/main .
 ARG DOCKER_CONFIG_PATH
 RUN mkdir -p /app/config
 COPY ${DOCKER_CONFIG_PATH} /app/config/docker.yaml
+COPY --from=builder /app/docker-compose.yml /app/docker-compose.yml
 
 EXPOSE 8000
 
