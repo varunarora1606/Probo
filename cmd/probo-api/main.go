@@ -22,11 +22,6 @@ import (
 )
 
 func main() {
-	// Load config
-	// err := godotenv.Load("C:/WebDev/Probo-Go/.env")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
 	cfg := config.MustLoad()
 
 	// Db setup
