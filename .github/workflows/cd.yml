@@ -39,7 +39,7 @@ jobs:
           docker-compose --version  # Verify installation
 
       - name: Start services
-        run: docker-compose up -d --build
+        run: sudo docker-compose up -d --build
 
       - name: Run tests
         run: go test ./...
@@ -58,6 +58,7 @@ jobs:
 
       - name: Deploy to EC2
         run: |
+
           # Set up SSH key
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
