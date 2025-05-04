@@ -38,7 +38,10 @@ func main() {
 	// router.POST("/api/v1/user/logout", user.Logout)
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.AllowedOrigins},
+		AllowOriginFunc: func(origin string) bool {
+			// Allow all origins dynamically
+			return true
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,           // Allow credentials (cookies, authorization headers, etc.)
