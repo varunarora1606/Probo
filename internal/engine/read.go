@@ -89,6 +89,7 @@ func GetMe(userId string) (types.Balance, []types.PortfolioItem) {
 		value := sideBalance[types.Yes].Quantity*yesClosing + sideBalance[types.No].Quantity*(100-yesClosing)
 		portfolioItems = append(portfolioItems, types.PortfolioItem{
 			Symbol:   symbol,
+			Title: memory.MarketBook.Data[symbol].Title,
 			Quantity: sideBalance[types.Yes].Quantity + sideBalance[types.No].Quantity,
 			Value:    value,
 		})

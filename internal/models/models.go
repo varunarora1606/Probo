@@ -17,7 +17,7 @@ type User struct {
 type Order struct {
 	BetId           string                `gorm:"type:text;primaryKey"`
 	EventId         string                `gorm:"type:text;not null;unique"` //Lets see if I use it
-	UserID          string                `gorm:"type:text;not null"`
+	UserId          string                `gorm:"type:text;not null"`
 	Symbol          string                `gorm:"type:text;not null"`
 	Side            types.Side            `gorm:"type:text;check:side IN ('yes','no');not null"`
 	TransactionType types.TransactionType `gorm:"column:transaction_type;type:text;check:transaction_type In ('buy','sell');not null"`
@@ -29,26 +29,23 @@ type Order struct {
 
 type InrBalance struct {
 	UserId   string `gorm:"type:text;primaryKey"`
-	Quantity int    `gorm:"type:numeric;default:0"`
-	Locked   int    `gorm:"type:numeric;default:0"`
+	Quantity int    `gorm:"type:numeric;default:0"`	//Locked + quantity
 }
 
 type StockBalance struct {
 	UserId string `gorm:"type:text;primaryKey"`
 	Symbol string `gorm:"type:text;primaryKey"`
-	YesQty int    `gorm:"default:0"`
-	YesLck int    `gorm:"default:0"`
-	NoQty  int    `gorm:"default:0"`
-	NoLck  int    `gorm:"default:0"`
+	YesQty int    `gorm:"default:0"`	//Locked + quantity
+	NoQty  int    `gorm:"default:0"`	//Locked + quantity
 }
 
 type Market struct {
 	Symbol     string `gorm:"type:text;primaryKey"`
-	Name       string `gorm:"type:text;not null"`
+	Title	   string `gorm:"type:text;not null"`
 	Question   string `gorm:"type:text;not null"`
 	EndTime    int64  `gorm:"type:bigint;not null"`
-	YesClosing int    `gorm:"type:numeric;default:0"`
-	Volume     int    `gorm:"type:numeric;default:0"`
+	YesClosing int    `gorm:"type:numeric;default:50"`   // Dont use YesClosing instead store orders in matched, open, cancelled type with timestamp and there see the last closed order 
+	// Volume     int    `gorm:"type:numeric;default:0"`	 // Same calculate ut during seedingData time instead.
 }
 
 // type Order struct {

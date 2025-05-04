@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/varunarora1606/Probo/internal/database"
+	"github.com/varunarora1606/Probo/internal/models"
 	"github.com/varunarora1606/Probo/internal/types"
 )
 
@@ -18,6 +20,7 @@ type HandlerReq struct {
 }
 
 type CreateMarketHandlerReq struct {
+	Title     	 string `json:"title" binding:"required"`
 	Question     string `json:"question" binding:"required"`
 	EndTimeMilli int64  `json:"endTime" binding:"required,gt=0"`
 	Symbol       string `json:"symbol" binding:"required"`
@@ -213,17 +216,41 @@ func CreateMarketHandler(c *gin.Context) {
 	serverTime := time.Now()
 
 	if endTime.Before(serverTime.Add(5 * time.Second)) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "EndTime should be in far future"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "endTime should be in far future"})
 		return
 	}
-	// TODO: Check and Add to DB
+
+	if result := database.DB.First(&models.Market{}, "symbol = ?", req.Symbol); result.Error == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "market alreasy exists"})
+		return
+	}
+
+	market := models.Market{ // TODO: Add userId and superAdmin support
+		Symbol: req.Symbol,
+		Title: req.Title,
+		Question: req.Question,
+		EndTime: endTime.UnixNano(),
+	}
+
+	if err := database.DB.Create(&market).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "error while creating the market"})
+		return
+	}
 
 	result, err := worker(types.Input{
 		Fnx:      "create_market",
 		Symbol:   req.Symbol,
+		Title: req.Title,
 		Question: req.Question,
 		EndTime:  endTime.UnixNano(),
 	})
+	
+	if err != nil || (result.Err != "" && result.Err != "symbol's market already exists") {
+		if err := database.DB.Where("symbol = ?", req.Symbol).Delete(&models.Market{}).Error; err != nil{
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "error while undoing the market creation in db"})
+			return // It a glitch and it should not happen at any case (TODO: Much better way is to do the same thing with in-memory rather than db and if db failes revert back in-memory data (You can use dissolve market functionality which you will make to distribute prizes))
+		}
+	}
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
@@ -233,8 +260,6 @@ func CreateMarketHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": result.Err})
 		return
 	}
-
-	// TODO: Return Db result.
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Market created successfully",
@@ -251,13 +276,39 @@ func OnRampInrHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Add to DB
+	var inrBalance models.InrBalance
+
+	if result := database.DB.First(inrBalance, "user_id = ?", GetUserID(c)); result.Error != nil {
+		inrBalance = models.InrBalance{
+			UserId: GetUserID(c),
+			Quantity: req.Quantity,
+		}
+		if err := database.DB.Create(&inrBalance).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "error while creating the account for user"})
+			return
+		}
+	} else {
+		if err := database.DB.Model(&models.InrBalance{}).Where("user_id = ?", GetUserID(c)).Updates(models.InrBalance{
+			Quantity: inrBalance.Quantity + req.Quantity,
+		}).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "error while updating inrBalnace in DB"})
+			return
+		}
+	}
 
 	result, err := worker(types.Input{
 		Fnx:      "on_ramp_inr",
 		Quantity: req.Quantity,
 		UserId:   GetUserID(c),
 	})
+
+	if err != nil || result.Err != "" {
+		if err := database.DB.Where("user_id = ?", GetUserID(c)).Delete(&models.InrBalance{}).Error; err != nil{
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": "error while undoing the balance transaction in db"})
+			return // It a glitch and it should not happen at any case (TODO: Much better way is to do the same thing with in-memory rather than db and if db failes revert back in-memory data (You can use dissolve market functionality which you will make to distribute prizes))
+		}
+	}
+	
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error", "error": err.Error()})
 		return
