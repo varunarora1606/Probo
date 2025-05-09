@@ -28,7 +28,7 @@ func main() {
 	database.Connect(cfg.DBUrl, cfg.RedisUrl)
 	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
 		slog.Error("Failed to migrate database", "error", err.Error())
-		os.Exit(1) // Exit if migration fails
+		os.Exit(1)
 	}
 
 	// Setup router
@@ -44,8 +44,8 @@ func main() {
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,           // Allow credentials (cookies, authorization headers, etc.)
-		MaxAge:           12 * time.Hour, // Cache preflight response for 12 hours
+		AllowCredentials: true, 
+		MaxAge:           12 * time.Hour, 
 	}))
 
 	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)

@@ -81,9 +81,13 @@ jobs:
             sudo docker pull varunarora1606/probo:${{ github.sha }}
 
             # Stop and remove the existing container if it exists
-            sudo echo "Stopping and removing existing container 'probo' if any..."
+            echo "Stopping and removing existing container 'probo' if any..."
             sudo docker stop probo || true
             sudo docker rm probo || true
+
+            echo "Cleaning up unused Docker resources..."
+            sudo docker image prune -af --filter "until=2h"
+            sudo docker volume prune -f
 
             # Run the new container in detached mode
             echo "Starting new container 'probo' with commit tag: ${GITHUB_SHA}"
