@@ -1,6 +1,20 @@
-# 🎯 Betwise Backend (Probo)
+# 📈 Betwise – Decentralized Prediction Market Engine
 
-**Betwise** is a real-money binary opinion trading platform — allowing users to buy and sell "yes" or "no" shares on future events. Inspired by Probo and Polymarket, this Go backend powers real-time matching, in-memory state, and eventual persistence using Redis and PostgreSQL.
+**Betwise** is a high-performance engine for a decentralized **prediction market** platform, inspired by systems like [Polymarket](https://polymarket.com/). It allows users to buy and sell shares on the outcomes of future events with dynamic market-based pricing.
+
+The architecture is designed to be modular, scalable, and real-time. Orders are processed in-memory for ultra-fast matching, while persistence and analytics are handled asynchronously via Redis-backed workers and PostgreSQL.
+
+> Think of it as a mini NASDAQ for betting on real-world questions like:
+> - "Will Bitcoin hit $100K by Dec 2025?"
+> - "Will India win the Cricket World Cup 2027?"
+> - "Will OpenAI release GPT-5 by Q2 2026?"
+
+---
+
+## 🎥 Demo
+
+Check out the full working demo of Betwise in action:  
+[▶️ Watch Demo on Twitter](https://x.com/VarunArora80243/status/1920876699891200213)
 
 ---
 
@@ -164,8 +178,8 @@ Probo/
 
 ## 🔗 Related Projects
 
-- [🖥️ betwise-fe](https://github.com/varunarora1606/betwise-fe) – React frontend for this backend
-- [🎥 Redix (In-Memory DB)](https://x.com/VarunArora80243/status/...) – Custom Redis clone used for learning
+- [🖥️ betwise-fe](https://github.com/varunarora1606/Betwise) – Next frontend for this backend
+- [🎥 Redix (In-Memory DB)](https://github.com/varunarora1606/Redix) – Custom Redis clone used for learning
 
 ---
 
