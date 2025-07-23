@@ -33,9 +33,6 @@ func main() {
 
 	// Setup router
 	router := gin.Default()
-	// router.POST("/api/v1/user/signup", user.Signup)
-	// router.POST("/api/v1/user/login", user.Signin)
-	// router.POST("/api/v1/user/logout", user.Logout)
 
 	router.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
@@ -44,9 +41,13 @@ func main() {
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true, 
-		MaxAge:           12 * time.Hour, 
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
+
+	// router.POST("/api/v1/user/signup", user.Signup)
+	// router.POST("/api/v1/user/login", user.Signin)
+	// router.POST("/api/v1/user/logout", user.Logout)
 
 	router.POST("/api/v1/order/create-market", order.CreateMarketHandler)
 
