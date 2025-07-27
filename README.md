@@ -85,7 +85,7 @@ Check out the full working demo of Betwise in action:
     +-------------+---------------+                   +--------------+--------------+
                   |                                                   |
      +------------v------------+                         +------------v-------------+
-     |  API reads & responds   |                         |     🗃️ DB Worker         |
+     |  API reads & responds   |                         |     🗃️ DB Worker        |
      |  with result (trades,   |                         |  - Bulk inserts open     |
      |  balances, markets, etc)|                         |    orders                |
      +-------------------------+                         |  - Handles updates/match |
